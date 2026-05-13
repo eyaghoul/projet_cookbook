@@ -1,0 +1,187 @@
+@page "/ingredients"
+@rendermode InteractiveServer
+@inject IIngredientService IngredientService
+@inject IUnitService UnitService
+
+<div class="page-header">
+    <div>
+        <h1>Ingredients</h1>
+        <p class="subtitle">Manage ingredients and their nutritional values</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowAddModal">
+        <i class="fas fa-plus"></i> Add Ingredient
+    </button>
+</div>
+
+@if (ingredients == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Calories / Unit</th>
+                    <th>Unit</th>
+                    <th style="width:120px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ingredient in ingredients)
+                {
+                    <tr>
+                        <td>@ingredient.Id</td>
+                        <td><strong>@ingredient.Name</strong></td>
+                        <td><span class="badge calories">@ingredient.CaloriesPerUnit kcal</span></td>
+                        <td>@(ingredient.Unit?.Name ?? "N/A") (@(ingredient.Unit?.Abbreviation ?? ""))</td>
+                        <td>
+                            <div class="card-actions">
+                                <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(ingredient)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteIngredient(ingredient.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (isModalOpen)
+{
+    <div class="modal-overlay">
+        <div class="modal">
+            <h2>@(editingIngredient.Id == 0 ? "Add Ingredient" : "Edit Ingredient")</h2>
+            
+            <EditForm Model="editingIngredient" OnValidSubmit="SaveIngredient">
+                <DataAnnotationsValidator />
+                
+                <div class="form-group">
+                    <label>Name</label>
+                    <InputText @bind-Value="editingIngredient.Name" placeholder="e.g. Tomato" />
+                    <ValidationMessage For="@(() => editingIngredient.Name)" class="validation-message" />
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Calories per unit</label>
+                        <InputNumber @bind-Value="editingIngredient.CaloriesPerUnit" />
+                        <ValidationMessage For="@(() => editingIngredient.CaloriesPerUnit)" class="validation-message" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <InputSelect @bind-Value="editingIngredient.UnitId">
+                            <option value="0">Select a unit...</option>
+                            @if (units != null)
+                            {
+                                @foreach (var unit in units)
+                                {
+                                    <option value="@unit.Id">@unit.Name (@unit.Abbreviation)</option>
+                                }
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => editingIngredient.UnitId)" class="validation-message" />
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="error">@errorMessage</div>
+                }
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Ingredient> ingredients;
+    private List<Unit> units;
+    private Ingredient editingIngredient = new();
+    private bool isModalOpen = false;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        ingredients = await IngredientService.GetAllAsync();
+        units = await UnitService.GetAllAsync();
+    }
+
+    private void ShowAddModal()
+    {
+        editingIngredient = new Ingredient();
+        errorMessage = "";
+        isModalOpen = true;
+    }
+
+    private void ShowEditModal(Ingredient ingredient)
+    {
+        editingIngredient = new Ingredient
+        {
+            Id = ingredient.Id,
+            Name = ingredient.Name,
+            CaloriesPerUnit = ingredient.CaloriesPerUnit,
+            UnitId = ingredient.UnitId
+        };
+        errorMessage = "";
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+    }
+
+    private async Task SaveIngredient()
+    {
+        if (editingIngredient.UnitId == 0)
+        {
+            errorMessage = "Please select a unit.";
+            return;
+        }
+
+        if (editingIngredient.Id == 0)
+        {
+            await IngredientService.AddAsync(editingIngredient);
+        }
+        else
+        {
+            await IngredientService.UpdateAsync(editingIngredient);
+        }
+        
+        isModalOpen = false;
+        await LoadData();
+    }
+
+    private async Task DeleteIngredient(int id)
+    {
+        var isUsed = await IngredientService.IsUsedInRecipeAsync(id);
+        if (isUsed)
+        {
+            // Just display a simple javascript alert or use a custom toast in a real app
+            // For now, we will skip if used.
+            return;
+        }
+
+        await IngredientService.DeleteAsync(id);
+        await LoadData();
+    }
+}

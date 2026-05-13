@@ -1,0 +1,133 @@
+@page "/cuisines"
+@rendermode InteractiveServer
+@inject ITypeCuisineService TypeCuisineService
+
+<div class="page-header">
+    <div>
+        <h1>Cuisines</h1>
+        <p class="subtitle">Manage types of cuisines</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowAddModal">
+        <i class="fas fa-plus"></i> Add Cuisine
+    </button>
+</div>
+
+@if (cuisines == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th style="width:120px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cuisine in cuisines)
+                {
+                    <tr>
+                        <td>@cuisine.Id</td>
+                        <td><span class="badge cuisine">@cuisine.Name</span></td>
+                        <td>
+                            <div class="card-actions">
+                                <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(cuisine)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCuisine(cuisine.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (isModalOpen)
+{
+    <div class="modal-overlay">
+        <div class="modal">
+            <h2>@(editingCuisine.Id == 0 ? "Add Cuisine" : "Edit Cuisine")</h2>
+            
+            <EditForm Model="editingCuisine" OnValidSubmit="SaveCuisine">
+                <DataAnnotationsValidator />
+                
+                <div class="form-group">
+                    <label>Name</label>
+                    <InputText @bind-Value="editingCuisine.Name" placeholder="e.g. Italian" />
+                    <ValidationMessage For="@(() => editingCuisine.Name)" class="validation-message" />
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CookBook.Models.TypeCuisine> cuisines;
+    private CookBook.Models.TypeCuisine editingCuisine = new();
+    private bool isModalOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCuisines();
+    }
+
+    private async Task LoadCuisines()
+    {
+        cuisines = await TypeCuisineService.GetAllAsync();
+    }
+
+    private void ShowAddModal()
+    {
+        editingCuisine = new CookBook.Models.TypeCuisine();
+        isModalOpen = true;
+    }
+
+    private void ShowEditModal(CookBook.Models.TypeCuisine cuisine)
+    {
+        editingCuisine = new CookBook.Models.TypeCuisine
+        {
+            Id = cuisine.Id,
+            Name = cuisine.Name
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+    }
+
+    private async Task SaveCuisine()
+    {
+        if (editingCuisine.Id == 0)
+        {
+            await TypeCuisineService.AddAsync(editingCuisine);
+        }
+        else
+        {
+            await TypeCuisineService.UpdateAsync(editingCuisine);
+        }
+        
+        isModalOpen = false;
+        await LoadCuisines();
+    }
+
+    private async Task DeleteCuisine(int id)
+    {
+        await TypeCuisineService.DeleteAsync(id);
+        await LoadCuisines();
+    }
+}

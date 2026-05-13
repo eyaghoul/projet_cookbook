@@ -1,0 +1,133 @@
+@page "/categories"
+@rendermode InteractiveServer
+@inject ICategoryService CategoryService
+
+<div class="page-header">
+    <div>
+        <h1>Categories</h1>
+        <p class="subtitle">Manage recipe categories</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowAddModal">
+        <i class="fas fa-plus"></i> Add Category
+    </button>
+</div>
+
+@if (categories == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th style="width:120px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var category in categories)
+                {
+                    <tr>
+                        <td>@category.Id</td>
+                        <td><span class="badge category">@category.Name</span></td>
+                        <td>
+                            <div class="card-actions">
+                                <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(category)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCategory(category.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (isModalOpen)
+{
+    <div class="modal-overlay">
+        <div class="modal">
+            <h2>@(editingCategory.Id == 0 ? "Add Category" : "Edit Category")</h2>
+            
+            <EditForm Model="editingCategory" OnValidSubmit="SaveCategory">
+                <DataAnnotationsValidator />
+                
+                <div class="form-group">
+                    <label>Name</label>
+                    <InputText @bind-Value="editingCategory.Name" placeholder="e.g. Dessert" />
+                    <ValidationMessage For="@(() => editingCategory.Name)" class="validation-message" />
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Category> categories;
+    private Category editingCategory = new();
+    private bool isModalOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await CategoryService.GetAllAsync();
+    }
+
+    private void ShowAddModal()
+    {
+        editingCategory = new Category();
+        isModalOpen = true;
+    }
+
+    private void ShowEditModal(Category category)
+    {
+        editingCategory = new Category
+        {
+            Id = category.Id,
+            Name = category.Name
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+    }
+
+    private async Task SaveCategory()
+    {
+        if (editingCategory.Id == 0)
+        {
+            await CategoryService.AddAsync(editingCategory);
+        }
+        else
+        {
+            await CategoryService.UpdateAsync(editingCategory);
+        }
+        
+        isModalOpen = false;
+        await LoadCategories();
+    }
+
+    private async Task DeleteCategory(int id)
+    {
+        await CategoryService.DeleteAsync(id);
+        await LoadCategories();
+    }
+}
