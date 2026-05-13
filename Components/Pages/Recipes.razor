@@ -5,407 +5,41 @@
 @inject IIngredientService IngredientService
 @inject IUnitService UnitService
 @inject ITypeCuisineService TypeCuisineService
+@inject IJSRuntime JSRuntime
 
 <style>
-    .smart-filter-bar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 20px;
-        padding: 0.75rem;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 18px;
-    }
-
-    .search-input {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex: 1;
-        min-width: 0;
-    }
-
-    .search-input input,
-    .smart-filter-bar select {
-        flex: 1;
-        min-width: 0;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        font-size: 1rem;
-        background: rgba(0, 0, 0, 0.2);
-        color: var(--text);
-        outline: none;
-        transition: all 0.3s ease;
-        font-family: inherit;
-        height: 44px;
-    }
-
-    .search-input input:focus,
-    .smart-filter-bar select:focus {
-        border-color: var(--primary);
-        background: rgba(0, 0, 0, 0.3);
-        box-shadow: 0 0 0 2px var(--primary-glow);
-    }
-
-    .smart-filter-bar select {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        background-size: 16px 12px;
-        padding-right: 2.5rem;
-        flex: 0 0 220px;
-        width: 220px;
-        max-width: 240px;
-    }
-
-    .search-icon {
-        font-size: 1rem;
-        color: var(--text-light);
-    }
-
-    .smart-filter-bar button.btn-secondary {
-        min-height: 44px;
-        padding: 0 1rem;
-        border-radius: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        white-space: nowrap;
-    }
-
-    .star-button {
-        background: none;
-        border: none;
-        color: #94a3b8;
-        font-size: 18px;
-        cursor: pointer;
-        transition: color 0.2s ease, transform 0.2s ease;
-    }
-
-    .star-button:hover,
-    .star-button:focus {
-        color: #ff6b6b;
-        transform: translateY(-1px);
-    }
-
-    .star-button.filled {
-        color: #ff6b6b;
-    }
-
-    .rating-summary {
-        font-size: 0.9rem;
-        color: #94a3b8;
-        margin-top: 0.5rem;
-    }
-
-    .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(8px);
-        z-index: 1000;
-    }
-
-    .modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(145deg, #1e293b, #0f172a);
-        border: 1px solid var(--card-border);
-        border-radius: 24px;
-        padding: 2.5rem;
-        max-width: 600px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-        z-index: 1001;
-        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .modal-header h3 {
-        margin: 0;
-        font-size: 1.8rem;
-    }
-
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--text-light);
-    }
-
-    .modal-body {
-        display: grid;
-        gap: 1.25rem;
-    }
-
-    .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border);
-    }
-
-    .form-group {
-        margin-bottom: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .form-group label {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text-light);
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        font-size: 1rem;
-        outline: none;
-        background: rgba(0, 0, 0, 0.2);
-        color: var(--text);
-        transition: all 0.3s ease;
-        font-family: inherit;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-        border-color: var(--primary);
-        background: rgba(0, 0, 0, 0.3);
-        box-shadow: 0 0 0 2px var(--primary-glow);
-    }
-
-    .form-group select {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        background-size: 16px 12px;
-        padding-right: 2.5rem;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .ingredient-row {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-        margin-bottom: 0.75rem;
-    }
-
-    .ingredient-row select,
-    .ingredient-row input {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .ingredient-row button {
-        min-width: 44px;
-        min-height: 44px;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-light);
-        cursor: pointer;
-        transition: background 0.2s ease;
-    }
-
-    .ingredient-row button:hover {
-        background: rgba(255, 255, 255, 0.12);
-    }
-
-    .image-preview {
-        max-width: 100%;
-        height: auto;
-        margin-top: 0.75rem;
-        border-radius: 10px;
-    }
-
-    .error-message,
-    .validation-message {
-        color: var(--accent-red);
-        font-size: 0.88rem;
-        margin-top: 0.5rem;
-    }
-
-    .add-recipe-section {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 16px;
-    }
-
-    /* Compact recipe cards */
-    .recipe-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.25rem;
-        margin-bottom: 2rem;
-    }
-
-    .recipe-card {
-        border-radius: 18px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        box-shadow: var(--shadow);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .recipe-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.35);
-    }
-
-    .recipe-image {
-        height: 170px;
-        background: #2a3441;
-        background-size: cover;
-        background-position: center;
-    }
-
-    .recipe-content {
-        padding: 1rem 1rem 1.1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        flex: 1;
-    }
-
-    .recipe-card h3 {
-        font-size: 1.1rem;
-        margin: 0;
-        line-height: 1.25;
-    }
-
-    .recipe-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        font-size: 0.88rem;
-        color: var(--text-light);
-    }
-
-    .recipe-badge-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .badge {
-        padding: 0.2rem 0.55rem;
-        border-radius: 14px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-
-    .ingredients-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-    }
-
-    .ingredient-chip {
-        font-size: 0.78rem;
-        padding: 0.3rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--text-light);
-    }
-
-    .rating-board {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-    }
-
-    .stars {
-        display: flex;
-        gap: 0.35rem;
-    }
-
-    .star-button {
-        font-size: 15px;
-        padding: 0;
-        width: 24px;
-        height: 24px;
-        line-height: 1;
-    }
-
-    .rating-summary {
-        font-size: 0.82rem;
-        margin-top: 0.25rem;
-    }
+    .add-recipe-section { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+    .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
 </style>
 
 <div class="page-header">
     <div>
-        <h1>Recettes</h1>
-        <p class="subtitle">Filtrer vos recettes en temps réel et noter vos favoris.</p>
+        <h1>Recipes</h1>
+        <p class="subtitle">Filter your recipes in real time and rate your favorites.</p>
     </div>
 </div>
 
 @if (isLoading)
 {
-    <p><em>Chargement des recettes...</em></p>
+    <p><em>Loading recipes...</em></p>
 }
 else
 {
     <div class="add-recipe-section">
-        <button class="btn btn-primary" @onclick="() => showAddRecipeModal = true">+ Ajouter une recette</button>
+        <button class="btn btn-primary" @onclick="OpenAddRecipeModal">+ Add Recipe</button>
     </div>
 
-    <div class="smart-filter-bar">
-        <div class="search-input">
-            <span class="search-icon">🔍</span>
-            <input type="text" @bind="universalSearch" placeholder="Rechercher par nom, ingrédient ou calories..." />
-        </div>
-        <InputSelect @bind-Value="selectedCategory">
-            <option value="Toutes">Toutes</option>
-            @foreach (var cat in categories)
-            {
-                <option value="@cat.Name">@cat.Name</option>
-            }
-        </InputSelect>
-        <button class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
-    </div>
+    <RecipeFilterBar UniversalSearch="@universalSearch"
+                     UniversalSearchChanged="@(v => { universalSearch = v; StateHasChanged(); })"
+                     SelectedCategory="@selectedCategory"
+                     SelectedCategoryChanged="@(v => { selectedCategory = v; StateHasChanged(); })"
+                     Categories="@categories" OnReset="ResetFilters" />
 
     @if (!FilteredRecipes.Any())
     {
         <div class="empty-state">
-            <h2>Aucune recette ne correspond aux filtres.</h2>
-            <p>Essayez de réinitialiser les filtres ou de modifier vos critères de recherche.</p>
+            <h2>No recipes match the filters.</h2>
+            <p>Try resetting the filters or changing your search criteria.</p>
         </div>
     }
     else
@@ -413,144 +47,41 @@ else
         <div class="recipe-grid">
             @foreach (var recipe in FilteredRecipes)
             {
-                <div class="recipe-card">
-                    <div class="recipe-image"
-                         style="background-image:url('@(recipe.ImageUrl ?? "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80")')">
-                    </div>
-                    <div class="recipe-content">
-                        <div class="recipe-badge-row">
-                            <span class="badge category">@recipe.Category?.Name</span>
-                            <span class="badge time">@recipe.TypeCuisine?.Name</span>
-                        </div>
-                        <h3>@recipe.Name</h3>
-                        <div class="recipe-meta">
-                            <span>@Math.Round(recipe.CaloriesPerPerson) kcal / personne</span>
-                            <span>@recipe.NumberOfPersons personne(s)</span>
-                        </div>
-                        <div class="ingredients-list">
-                            @foreach (var ingredient in recipe.RecipeIngredients)
-                            {
-                                <span class="ingredient-chip">@ingredient.Quantity @ingredient.Unit?.Abbreviation
-                                    @ingredient.Ingredient?.Name</span>
-                                }
-                            </div>
-                            <div class="rating-board">
-                                <div class="stars">
-                                    @for (var star = 1; star <= 5; star++)
-                                    {
-                                        <button type="button" class="star-button @(IsStarActive(recipe.Id, star) ? "filled" : "")"
-                                                @onclick="() => RateRecipe(recipe.Id, star)" @onmouseover="() => SetHover(recipe.Id, star)"
-                                                @onmouseout="() => ClearHover(recipe.Id)">
-                                            <i class="fas fa-star"></i>
-                                        </button>
-                                    }
-                                </div>
-                                <div class="rating-summary">
-                                    @if (GetVoteCount(recipe.Id) == 0)
-                                    {
-                                        <span>Pas encore noté</span>
-                                    }
-                                    else
-                                    {
-                                        <span>@GetAverageRating(recipe.Id).ToString("0.0") / 5 · @GetVoteCount(recipe.Id) vote(s)</span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    }
-
-    @if (showAddRecipeModal)
-    {
-        <div class="modal-backdrop" @onclick="CloseModal"></div>
-        <div class="modal" @onkeydown="HandleKeyDown">
-            <div class="modal-header">
-                <h3>Ajouter une recette</h3>
-                <button class="close-btn" @onclick="CloseModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                @if (hasError)
-                {
-                    <div class="error-message">@errorMessage</div>
-                }
-                <div class="form-group">
-                    <label>Nom de la recette *</label>
-                    <input type="text" @bind="recipeName" placeholder="Entrez le nom de la recette" />
-                </div>
-                <div class="form-group">
-                    <label>Catégorie</label>
-                    <select @bind="selectedCategoryForm">
-                        <option value="Petit-déjeuner">Petit-déjeuner</option>
-                        <option value="Déjeuner">Déjeuner</option>
-                        <option value="Dîner">Dîner</option>
-                        <option value="Dessert">Dessert</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Type de cuisine</label>
-                    <select @bind="selectedTypeCuisine">
-                        <option value="Tunisienne">Tunisienne</option>
-                        <option value="Française">Française</option>
-                        <option value="Italienne">Italienne</option>
-                        <option value="Méditerranéenne">Méditerranéenne</option>
-                        <option value="Autre">Autre</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Nombre de personnes</label>
-                    <InputNumber @bind-Value="numberOfPersons" min="1" />
-                </div>
-                <div class="form-group">
-                    <label>Calories par personne</label>
-                    <InputNumber @bind-Value="caloriesPerPerson" min="0" />
-                </div>
-                <div class="form-group">
-                    <label>Ingrédients *</label>
-                    @foreach (var (ing, index) in ingredients.Select((i, idx) => (i, idx)))
-                    {
-                        <div class="ingredient-row">
-                            <select @bind="ing.IngredientName">
-                                <option value="">Sélectionner un ingrédient</option>
-                                @foreach (var ingredient in allIngredients)
-                                {
-                                    <option value="@ingredient.Name">@ingredient.Name</option>
-                                }
-                            </select>
-                            <InputNumber @bind-Value="ing.Quantity" />
-                            <select @bind="ing.UnitAbbreviation">
-                                <option value="">Unité</option>
-                                @foreach (var unit in units)
-                                {
-                                    <option value="@unit.Abbreviation">@unit.Abbreviation</option>
-                                }
-                            </select>
-                            <button type="button" @onclick="() => RemoveIngredient(index)">❌</button>
-                        </div>
-                    }
-                    <button type="button" class="btn btn-secondary" @onclick="AddIngredient">+ Ajouter un ingrédient</button>
-                </div>
-                <div class="form-group">
-                    <label>Instructions / Étapes</label>
-                    <textarea @bind="instructions" rows="4"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Image de la recette</label>
-                    <InputFile accept="image/*" OnChange="HandleFileChange" />
-                    @if (!string.IsNullOrEmpty(imagePreview))
-                    {
-                        <img src="@imagePreview" alt="Aperçu" class="image-preview" />
-                    }
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseModal">Annuler</button>
-                <button class="btn btn-primary" @onclick="SaveRecipe">Enregistrer</button>
-            </div>
+                <RecipeCard Recipe="recipe"
+                            CurrentRating="GetCurrentRating(recipe.Id)"
+                            HoverRating="@(hoverRatings.TryGetValue(recipe.Id, out var h) ? h : 0)"
+                            AverageRating="GetAverageRating(recipe.Id)"
+                            VoteCount="GetVoteCount(recipe.Id)"
+                            OnClick="OpenRecipeDetails"
+                            OnEdit="OpenEditRecipeModal"
+                            OnDelete="DeleteRecipe"
+                            OnRate="@(star => RateRecipe(recipe.Id, star))"
+                            OnHover="@(star => SetHover(recipe.Id, star))"
+                            OnHoverOut="@(() => ClearHover(recipe.Id))" />
+            }
         </div>
     }
+
+    @if (showRecipeDetails && selectedRecipe is not null)
+    {
+        <RecipeDetails Recipe="selectedRecipe" AverageRating="selectedRecipeAverageRating" OnClose="CloseRecipeDetails" />
+    }
+
+    <RecipeFormModal IsVisible="showAddRecipeModal" IsEditMode="isEditMode"
+                     RecipeName="@recipeName" RecipeNameChanged="@(v => recipeName = v)"
+                     SelectedCategoryForm="@selectedCategoryForm" SelectedCategoryFormChanged="@(v => selectedCategoryForm = v)"
+                     SelectedTypeCuisine="@selectedTypeCuisine" SelectedTypeCuisineChanged="@(v => selectedTypeCuisine = v)"
+                     NumberOfPersons="@numberOfPersons" NumberOfPersonsChanged="@(v => numberOfPersons = v)"
+                     CaloriesPerPerson="@caloriesPerPerson" CaloriesPerPersonChanged="@(v => caloriesPerPerson = v)"
+                     Instructions="@instructions" InstructionsChanged="@(v => instructions = v)"
+                     ImagePreview="@imagePreview"
+                     Categories="@categories" TypeCuisines="@typeCuisines"
+                     AllIngredients="@allIngredients" Units="@units"
+                     Ingredients="@ingredients" HasError="@hasError" ErrorMessage="@errorMessage"
+                     OnSave="SaveRecipe" OnCancel="CloseModal" OnBackdropClick="CloseModal"
+                     OnAddIngredient="AddIngredient" OnRemoveIngredient="RemoveIngredient"
+                     OnFileChange="HandleFileChange" />
+}
 
 @code {
     private bool isLoading = true;
@@ -560,57 +91,34 @@ else
     private List<Unit> units = new();
     private List<TypeCuisine> typeCuisines = new();
     private string universalSearch = string.Empty;
-    private string selectedCategory = "Toutes";
-
+    private string selectedCategory = "All";
     private readonly Dictionary<int, RatingRecord> ratings = new();
     private readonly Dictionary<int, int> hoverRatings = new();
 
-    // Add recipe modal
-    private bool showAddRecipeModal = false;
-    private string recipeName = "";
-    private string selectedCategoryForm = "Petit-déjeuner";
-    private string selectedTypeCuisine = "Tunisienne";
+    // Modal state
+    private bool showAddRecipeModal, showRecipeDetails, isEditMode, hasError;
+    private int editingRecipeId;
+    private Recipe? selectedRecipe;
+    private double selectedRecipeAverageRating;
+    private string recipeName = "", selectedCategoryForm = "", selectedTypeCuisine = "";
+    private string instructions = "", imagePreview = "", errorMessage = "";
     private int numberOfPersons = 1;
-    private double caloriesPerPerson = 0;
-    private string instructions = "";
-    private string imagePreview = "";
+    private double caloriesPerPerson;
     private IBrowserFile? uploadedFile;
-    private bool hasError = false;
-    private string errorMessage = "";
-
     private List<IngredientRow> ingredients = new();
-
-    private class IngredientRow
-    {
-        public string IngredientName { get; set; } = "";
-        public double Quantity { get; set; }
-        public string UnitAbbreviation { get; set; } = "";
-    }
 
     private IEnumerable<Recipe> FilteredRecipes => recipes
         .Where(r =>
         {
             if (string.IsNullOrWhiteSpace(universalSearch)) return true;
-            if (int.TryParse(universalSearch.Trim(), out var cal))
-            {
-                return Math.Abs(r.CaloriesPerPerson - cal) <= 50;
-            }
-            else
-            {
-                return r.Name.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) ||
-                       r.RecipeIngredients.Any(ri => ri.Ingredient?.Name?.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) ==
-true);
-            }
+            if (int.TryParse(universalSearch.Trim(), out var cal)) return Math.Abs(r.CaloriesPerPerson - cal) <= 50;
+            return r.Name.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) ||
+                   r.RecipeIngredients.Any(ri => ri.Ingredient?.Name?.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) == true);
         })
-        .Where(r => selectedCategory == "Toutes" || string.Equals(r.Category?.Name, selectedCategory,
-StringComparison.OrdinalIgnoreCase))
+        .Where(r => selectedCategory == "All" || string.Equals(r.Category?.Name, selectedCategory, StringComparison.OrdinalIgnoreCase))
         .ToList();
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-        isLoading = false;
-    }
+    protected override async Task OnInitializedAsync() { await LoadData(); isLoading = false; }
 
     private async Task LoadData()
     {
@@ -619,117 +127,79 @@ StringComparison.OrdinalIgnoreCase))
         allIngredients = await IngredientService.GetAllAsync();
         units = await UnitService.GetAllAsync();
         typeCuisines = await TypeCuisineService.GetAllAsync();
+        ResetForm();
     }
 
-    private void ResetFilters()
+    // Ratings
+    private void SetHover(int id, int star) => hoverRatings[id] = star;
+    private void ClearHover(int id) => hoverRatings[id] = 0;
+    private int GetVoteCount(int id) => ratings.TryGetValue(id, out var r) ? r.Votes : 0;
+    private double GetAverageRating(int id) => ratings.TryGetValue(id, out var r) && r.Votes > 0 ? Math.Round(r.Sum / (double)r.Votes, 1) : 0;
+    private int GetCurrentRating(int id) => ratings.TryGetValue(id, out var r) && r.Votes > 0 ? (int)Math.Round(r.Sum / (double)r.Votes) : 0;
+    private void RateRecipe(int id, int star)
     {
-        universalSearch = string.Empty;
-        selectedCategory = "Toutes";
+        if (!ratings.TryGetValue(id, out var rec)) { rec = new RatingRecord(); ratings[id] = rec; }
+        rec.Votes++; rec.Sum += star;
     }
 
-    private void SetHover(int recipeId, int star)
-    {
-        hoverRatings[recipeId] = star;
-    }
-
-    private void ClearHover(int recipeId)
-    {
-        hoverRatings[recipeId] = 0;
-    }
-
-    private void RateRecipe(int recipeId, int star)
-    {
-        if (!ratings.TryGetValue(recipeId, out var record))
-        {
-            record = new RatingRecord();
-            ratings[recipeId] = record;
-        }
-
-        record.Votes++;
-        record.Sum += star;
-    }
-
-    private bool IsStarActive(int recipeId, int star)
-    {
-        var hoverValue = hoverRatings.TryGetValue(recipeId, out var hover) ? hover : 0;
-        if (hoverValue > 0)
-            return star <= hoverValue;
-
-        var currentRating = GetCurrentRating(recipeId);
-        return star <= currentRating;
-    }
-
-    private int GetCurrentRating(int recipeId)
-    {
-        return ratings.TryGetValue(recipeId, out var record) && record.Votes > 0
-            ? (int)Math.Round(record.Sum / (double)record.Votes)
-            : 0;
-    }
-
-    private double GetAverageRating(int recipeId)
-    {
-        return ratings.TryGetValue(recipeId, out var record) && record.Votes > 0
-            ? Math.Round(record.Sum / (double)record.Votes, 1)
-            : 0;
-    }
-
-    private int GetVoteCount(int recipeId)
-    {
-        return ratings.TryGetValue(recipeId, out var record) ? record.Votes : 0;
-    }
-
-    private void AddIngredient()
-    {
-        ingredients.Add(new IngredientRow());
-    }
-
-    private void RemoveIngredient(int index)
-    {
-        if (index >= 0 && index < ingredients.Count)
-        {
-            ingredients.RemoveAt(index);
-        }
-    }
-
+    // Ingredients
+    private void AddIngredient() => ingredients.Add(new IngredientRow());
+    private void RemoveIngredient(int i) { if (i >= 0 && i < ingredients.Count) ingredients.RemoveAt(i); }
     private async Task HandleFileChange(InputFileChangeEventArgs e)
     {
         uploadedFile = e.File;
-        if (uploadedFile != null)
+        if (uploadedFile is not null)
         {
-            using var stream = uploadedFile.OpenReadStream(maxAllowedSize: 1024 * 1024 * 10); // 10MB
+            using var stream = uploadedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             var bytes = new byte[uploadedFile.Size];
             await stream.ReadAsync(bytes);
             imagePreview = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
         }
     }
 
+    // Modal
+    private void OpenAddRecipeModal() { isEditMode = false; editingRecipeId = 0; showAddRecipeModal = true; ResetForm(); }
+    private void CloseModal() { showAddRecipeModal = false; ResetForm(); }
+    private void ResetFilters() { universalSearch = string.Empty; selectedCategory = "All"; }
+    private void CloseRecipeDetails() { showRecipeDetails = false; selectedRecipe = null; }
+    private void OpenRecipeDetails(Recipe recipe)
+    {
+        selectedRecipe = recipe;
+        selectedRecipeAverageRating = GetAverageRating(recipe.Id);
+        showRecipeDetails = true;
+    }
+    private void OpenEditRecipeModal(Recipe recipe)
+    {
+        isEditMode = true; editingRecipeId = recipe.Id;
+        recipeName = recipe.Name;
+        selectedCategoryForm = recipe.Category?.Name ?? categories.FirstOrDefault()?.Name ?? "";
+        selectedTypeCuisine = recipe.TypeCuisine?.Name ?? typeCuisines.FirstOrDefault()?.Name ?? "";
+        numberOfPersons = recipe.NumberOfPersons;
+        caloriesPerPerson = recipe.CaloriesPerPerson;
+        instructions = recipe.CookingMethod;
+        imagePreview = recipe.ImageUrl ?? string.Empty;
+        ingredients = recipe.RecipeIngredients.Select(ri => new IngredientRow
+        {
+            IngredientName = ri.Ingredient?.Name ?? "",
+            Quantity = ri.Quantity,
+            UnitAbbreviation = ri.Unit?.Abbreviation ?? ""
+        }).ToList();
+        showAddRecipeModal = true;
+    }
+    private async Task DeleteRecipe(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this recipe?")) return;
+        await RecipeService.DeleteAsync(id);
+        recipes.RemoveAll(r => r.Id == id);
+    }
     private async Task SaveRecipe()
     {
         hasError = false;
-        if (string.IsNullOrWhiteSpace(recipeName))
-        {
-            hasError = true;
-            errorMessage = "Le nom de la recette est requis.";
-            return;
-        }
-        if (!ingredients.Any(i => !string.IsNullOrWhiteSpace(i.IngredientName)))
-        {
-            hasError = true;
-            errorMessage = "Au moins un ingrédient est requis.";
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(recipeName)) { hasError = true; errorMessage = "Recipe name is required."; return; }
+        if (!ingredients.Any(i => !string.IsNullOrWhiteSpace(i.IngredientName))) { hasError = true; errorMessage = "At least one ingredient is required."; return; }
 
-        var category = categories.FirstOrDefault(c => c.Name == selectedCategoryForm) ?? new Category
-        {
-            Name =
-selectedCategoryForm
-        };
-        var typeCuisine = typeCuisines.FirstOrDefault(t => t.Name == selectedTypeCuisine) ?? new TypeCuisine
-        {
-            Name =
-selectedTypeCuisine
-        };
-
+        var category = categories.FirstOrDefault(c => c.Name == selectedCategoryForm) ?? new Category { Name = selectedCategoryForm };
+        var typeCuisine = typeCuisines.FirstOrDefault(t => t.Name == selectedTypeCuisine) ?? new TypeCuisine { Name = selectedTypeCuisine };
         var recipeIngredients = ingredients
             .Where(i => !string.IsNullOrWhiteSpace(i.IngredientName))
             .Select(i => new RecipeIngredient
@@ -737,58 +207,35 @@ selectedTypeCuisine
                 Ingredient = allIngredients.First(ing => ing.Name == i.IngredientName),
                 Quantity = i.Quantity,
                 Unit = units.FirstOrDefault(u => u.Abbreviation == i.UnitAbbreviation)
-            })
-            .ToList();
+            }).ToList();
 
-        var newRecipe = new Recipe
+        var toSave = new Recipe
         {
-            Name = recipeName,
-            Category = category,
-            TypeCuisine = typeCuisine,
-            NumberOfPersons = numberOfPersons,
-            CookingMethod = instructions,
-            ImageUrl = null,
-            RecipeIngredients = new List<RecipeIngredient>()
+            Id = editingRecipeId, Name = recipeName, Category = category, TypeCuisine = typeCuisine,
+            NumberOfPersons = numberOfPersons, CookingMethod = instructions,
+            ImageUrl = imagePreview, RecipeIngredients = new List<RecipeIngredient>()
         };
 
-        await RecipeService.AddAsync(newRecipe, recipeIngredients);
-        recipes.Add(newRecipe);
-        showAddRecipeModal = false;
-        ResetForm();
-    }
-
-    private void CloseModal()
-    {
-        showAddRecipeModal = false;
-        ResetForm();
-    }
-
-    private void HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
+        if (isEditMode && editingRecipeId > 0)
         {
-            CloseModal();
+            await RecipeService.UpdateAsync(toSave, recipeIngredients);
+            var idx = recipes.FindIndex(r => r.Id == editingRecipeId);
+            if (idx >= 0) recipes[idx] = toSave;
         }
+        else
+        {
+            await RecipeService.AddAsync(toSave, recipeIngredients);
+            recipes.Add(toSave);
+        }
+        showAddRecipeModal = false; isEditMode = false; editingRecipeId = 0; ResetForm();
     }
-
     private void ResetForm()
     {
-        recipeName = "";
-        selectedCategoryForm = "Petit-déjeuner";
-        selectedTypeCuisine = "Tunisienne";
-        numberOfPersons = 1;
-        caloriesPerPerson = 0;
-        instructions = "";
-        imagePreview = "";
-        uploadedFile = null;
-        ingredients.Clear();
-        hasError = false;
-        errorMessage = "";
+        recipeName = ""; selectedCategoryForm = ""; selectedTypeCuisine = "";
+        numberOfPersons = 1; caloriesPerPerson = 0;
+        instructions = ""; imagePreview = ""; uploadedFile = null;
+        ingredients.Clear(); hasError = false; errorMessage = "";
     }
 
-    private class RatingRecord
-    {
-        public int Votes { get; set; }
-        public int Sum { get; set; }
-    }
+    private class RatingRecord { public int Votes { get; set; } public int Sum { get; set; } }
 }

@@ -1,0 +1,170 @@
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public string RecipeName { get; set; } = "";
+    [Parameter] public EventCallback<string> RecipeNameChanged { get; set; }
+    [Parameter] public string SelectedCategoryForm { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedCategoryFormChanged { get; set; }
+    [Parameter] public string SelectedTypeCuisine { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedTypeCuisineChanged { get; set; }
+    [Parameter] public int NumberOfPersons { get; set; } = 1;
+    [Parameter] public EventCallback<int> NumberOfPersonsChanged { get; set; }
+    [Parameter] public double CaloriesPerPerson { get; set; }
+    [Parameter] public EventCallback<double> CaloriesPerPersonChanged { get; set; }
+    [Parameter] public string Instructions { get; set; } = "";
+    [Parameter] public EventCallback<string> InstructionsChanged { get; set; }
+    [Parameter] public string ImagePreview { get; set; } = "";
+    [Parameter] public List<Category> Categories { get; set; } = new();
+    [Parameter] public List<TypeCuisine> TypeCuisines { get; set; } = new();
+    [Parameter] public List<Ingredient> AllIngredients { get; set; } = new();
+    [Parameter] public List<Unit> Units { get; set; } = new();
+    [Parameter] public List<IngredientRow> Ingredients { get; set; } = new();
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public string ErrorMessage { get; set; } = "";
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnBackdropClick { get; set; }
+    [Parameter] public EventCallback OnAddIngredient { get; set; }
+    [Parameter] public EventCallback<int> OnRemoveIngredient { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFileChange { get; set; }
+
+    private Task NameChanged(ChangeEventArgs e) => RecipeNameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    private Task CategoryChanged(ChangeEventArgs e) => SelectedCategoryFormChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    private Task CuisineChanged(ChangeEventArgs e) => SelectedTypeCuisineChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    private Task PersonsChanged(ChangeEventArgs e) => NumberOfPersonsChanged.InvokeAsync(int.TryParse(e.Value?.ToString(), out var n) ? n : 1);
+    private Task CaloriesChanged(ChangeEventArgs e) => CaloriesPerPersonChanged.InvokeAsync(double.TryParse(e.Value?.ToString(), out var d) ? d : 0);
+    private Task StepsChanged(ChangeEventArgs e) => InstructionsChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    private static void SetIngredientName(IngredientRow ing, ChangeEventArgs e) => ing.IngredientName = e.Value?.ToString() ?? string.Empty;
+    private static void SetIngredientQty(IngredientRow ing, ChangeEventArgs e) => ing.Quantity = double.TryParse(e.Value?.ToString(), out var q) ? q : 0;
+    private static void SetIngredientUnit(IngredientRow ing, ChangeEventArgs e) => ing.UnitAbbreviation = e.Value?.ToString() ?? string.Empty;
+}
+
+<style>
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; }
+    .modal {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        background: linear-gradient(145deg,#1e293b,#0f172a); border: 1px solid var(--card-border);
+        border-radius: 24px; padding: 2.5rem; max-width: 600px; width: 90%;
+        max-height: 90vh; overflow-y: auto; z-index: 1001; box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .modal-header h3 { margin: 0; font-size: 1.8rem; }
+    .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-light); }
+    .modal-body { display: grid; gap: 1.25rem; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-group label { font-size: 0.9rem; font-weight: 500; color: var(--text-light); }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 10px;
+        font-size: 1rem; outline: none; background: rgba(0,0,0,0.2); color: var(--text);
+        transition: all 0.3s ease; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+        border-color: var(--primary); background: rgba(0,0,0,0.3); box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+    .form-group select {
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat; background-position: right 1rem center; background-size: 16px 12px; padding-right: 2.5rem;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .ingredient-row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+    .ingredient-row select, .ingredient-row input { flex: 1; min-width: 0; }
+    .ingredient-row button {
+        min-width: 44px; min-height: 44px; border-radius: 10px; border: 1px solid var(--border);
+        background: rgba(255,255,255,0.05); color: var(--text-light); cursor: pointer; transition: background 0.2s ease;
+    }
+    .ingredient-row button:hover { background: rgba(255,255,255,0.12); }
+    .image-preview { max-width: 100%; height: auto; margin-top: 0.75rem; border-radius: 10px; }
+    .error-message { color: var(--accent-red); font-size: 0.88rem; margin-top: 0.5rem; }
+</style>
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="OnBackdropClick"></div>
+    <div class="modal">
+        <div class="modal-header">
+            <h3>@(IsEditMode ? "Edit Recipe" : "Add Recipe")</h3>
+            <button class="close-btn" @onclick="OnCancel">&times;</button>
+        </div>
+        <div class="modal-body">
+            @if (HasError)
+            {
+                <div class="error-message">@ErrorMessage</div>
+            }
+            <div class="form-group">
+                <label>Recipe Name *</label>
+                <input type="text" value="@RecipeName" @onchange="NameChanged" placeholder="Enter the recipe name" />
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select value="@SelectedCategoryForm" @onchange="CategoryChanged">
+                    @foreach (var cat in Categories)
+                    {
+                        <option value="@cat.Name">@cat.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Cuisine Type</label>
+                <select value="@SelectedTypeCuisine" @onchange="CuisineChanged">
+                    @foreach (var tc in TypeCuisines)
+                    {
+                        <option value="@tc.Name">@tc.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Number of Persons</label>
+                    <input type="number" min="1" value="@NumberOfPersons" @onchange="PersonsChanged" />
+                </div>
+                <div class="form-group">
+                    <label>Calories per Person</label>
+                    <input type="number" min="0" value="@CaloriesPerPerson" @onchange="CaloriesChanged" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Ingredients *</label>
+                @foreach (var (ing, index) in Ingredients.Select((i, idx) => (i, idx)))
+                {
+                    <div class="ingredient-row">
+                        <select value="@ing.IngredientName" @onchange="e => SetIngredientName(ing, e)">
+                            <option value="">Select an ingredient</option>
+                            @foreach (var ingredient in AllIngredients)
+                            {
+                                <option value="@ingredient.Name">@ingredient.Name</option>
+                            }
+                        </select>
+                        <input type="number" value="@ing.Quantity" @onchange="e => SetIngredientQty(ing, e)" />
+                        <select value="@ing.UnitAbbreviation" @onchange="e => SetIngredientUnit(ing, e)">
+                            <option value="">Unit</option>
+                            @foreach (var unit in Units)
+                            {
+                                <option value="@unit.Abbreviation">@unit.Abbreviation</option>
+                            }
+                        </select>
+                        <button type="button" @onclick="() => OnRemoveIngredient.InvokeAsync(index)">❌</button>
+                    </div>
+                }
+                <button type="button" class="btn btn-secondary" @onclick="OnAddIngredient">+ Add Ingredient</button>
+            </div>
+            <div class="form-group">
+                <label>Instructions / Steps</label>
+                <textarea rows="4" value="@Instructions" @onchange="StepsChanged"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Recipe Image</label>
+                <InputFile accept="image/*" OnChange="OnFileChange" />
+                @if (!string.IsNullOrEmpty(ImagePreview))
+                {
+                    <img src="@ImagePreview" alt="Preview" class="image-preview" />
+                }
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
+            <button class="btn btn-primary" @onclick="OnSave">@(IsEditMode ? "Update" : "Save")</button>
+        </div>
+    </div>
+}

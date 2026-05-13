@@ -1,0 +1,97 @@
+@code {
+    [Parameter] public string UniversalSearch { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> UniversalSearchChanged { get; set; }
+    [Parameter] public string SelectedCategory { get; set; } = "All";
+    [Parameter] public EventCallback<string> SelectedCategoryChanged { get; set; }
+    [Parameter] public List<Category> Categories { get; set; } = new();
+    [Parameter] public EventCallback OnReset { get; set; }
+}
+
+<style>
+    .smart-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 20px;
+        padding: 0.75rem;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 18px;
+    }
+
+    .search-input {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .search-input input,
+    .smart-filter-bar select {
+        flex: 1;
+        min-width: 0;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--text);
+        outline: none;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        height: 44px;
+    }
+
+    .search-input input:focus,
+    .smart-filter-bar select:focus {
+        border-color: var(--primary);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .smart-filter-bar select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px 12px;
+        padding-right: 2.5rem;
+        flex: 0 0 220px;
+        width: 220px;
+        max-width: 240px;
+    }
+
+    .search-icon {
+        font-size: 1rem;
+        color: var(--text-light);
+    }
+
+    .smart-filter-bar button.btn-secondary {
+        min-height: 44px;
+        padding: 0 1rem;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="smart-filter-bar">
+    <div class="search-input">
+        <span class="search-icon">🔍</span>
+        <input type="text" @bind="UniversalSearch" @bind:after="async () => await UniversalSearchChanged.InvokeAsync(UniversalSearch)"
+               placeholder="Search by name, ingredient, or calories..." />
+    </div>
+    <InputSelect @bind-Value="SelectedCategory" @bind-Value:after="async () => await SelectedCategoryChanged.InvokeAsync(SelectedCategory)">
+        <option value="All">All</option>
+        @foreach (var cat in Categories)
+        {
+            <option value="@cat.Name">@cat.Name</option>
+        }
+    </InputSelect>
+    <button class="btn btn-secondary" @onclick="OnReset">Reset</button>
+</div>

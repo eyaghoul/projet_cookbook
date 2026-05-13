@@ -1,0 +1,206 @@
+@code {
+    [Parameter] public Recipe Recipe { get; set; }
+    [Parameter] public int CurrentRating { get; set; }
+    [Parameter] public int HoverRating { get; set; }
+    [Parameter] public double AverageRating { get; set; }
+    [Parameter] public int VoteCount { get; set; }
+    [Parameter] public EventCallback<Recipe> OnClick { get; set; }
+    [Parameter] public EventCallback<Recipe> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<int> OnRate { get; set; }
+    [Parameter] public EventCallback<int> OnHover { get; set; }
+    [Parameter] public EventCallback OnHoverOut { get; set; }
+
+    private bool IsStarActive(int star)
+    {
+        var rating = HoverRating > 0 ? HoverRating : CurrentRating;
+        return star <= rating;
+    }
+}
+
+<style>
+    .recipe-card {
+        border-radius: 18px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--shadow);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+    }
+
+    .recipe-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.35);
+    }
+
+    .recipe-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+
+    .recipe-action-button {
+        min-width: 100px;
+        border-radius: 10px;
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+    }
+
+    .recipe-action-button.delete-button {
+        background: #dc2626;
+        border-color: rgba(220, 38, 38, 0.5);
+        color: white;
+    }
+
+    .recipe-image {
+        height: 170px;
+        background: #2a3441;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .recipe-content {
+        padding: 1rem 1rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .recipe-card h3 {
+        font-size: 1.1rem;
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    .recipe-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.88rem;
+        color: var(--text-light);
+    }
+
+    .recipe-badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .badge {
+        padding: 0.2rem 0.55rem;
+        border-radius: 14px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    .ingredients-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .ingredient-chip {
+        font-size: 0.78rem;
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-light);
+    }
+
+    .rating-board {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .stars {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .star-button {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 15px;
+        cursor: pointer;
+        transition: color 0.2s ease, transform 0.2s ease;
+        width: 24px;
+        height: 24px;
+        line-height: 1;
+    }
+
+    .star-button:hover,
+    .star-button:focus {
+        color: #ff6b6b;
+        transform: translateY(-1px);
+    }
+
+    .star-button.filled {
+        color: #ff6b6b;
+    }
+
+    .rating-summary {
+        font-size: 0.82rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<div class="recipe-card" @onclick="() => OnClick.InvokeAsync(Recipe)">
+    <div class="recipe-image"
+         style="background-image:url('@(Recipe.ImageUrl ?? "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80")')">
+    </div>
+    <div class="recipe-content">
+        <div class="recipe-badge-row">
+            <span class="badge category">@Recipe.Category?.Name</span>
+            <span class="badge time">@Recipe.TypeCuisine?.Name</span>
+        </div>
+        <h3>@Recipe.Name</h3>
+        <div class="recipe-meta">
+            <span>@Math.Round(Recipe.CaloriesPerPerson) kcal / person</span>
+            <span>@Recipe.NumberOfPersons person(s)</span>
+        </div>
+        <div class="ingredients-list">
+            @foreach (var ingredient in Recipe.RecipeIngredients)
+            {
+                <span class="ingredient-chip">@ingredient.Quantity @ingredient.Unit?.Abbreviation
+                    @ingredient.Ingredient?.Name</span>
+                }
+            </div>
+            <div class="rating-board">
+                <div class="stars">
+                    @for (var star = 1; star <= 5; star++)
+                    {
+                        <button type="button" class="star-button @(IsStarActive(star) ? "filled" : "")"
+                                @onclick:stopPropagation="true" @onclick="() => OnRate.InvokeAsync(star)"
+                                @onmouseover="() => OnHover.InvokeAsync(star)" @onmouseout="OnHoverOut">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    }
+                </div>
+                <div class="rating-summary">
+                    @if (VoteCount == 0)
+                    {
+                        <span>Not rated yet</span>
+                    }
+                    else
+                    {
+                        <span>@AverageRating.ToString("0.0") / 5 · @VoteCount vote(s)</span>
+                    }
+                </div>
+            </div>
+            <div class="recipe-actions">
+                <button type="button" class="btn btn-secondary recipe-action-button" @onclick:stopPropagation="true"
+                        @onclick="() => OnEdit.InvokeAsync(Recipe)">Edit</button>
+                <button type="button" class="btn btn-secondary recipe-action-button delete-button"
+                        @onclick:stopPropagation="true" @onclick="() => OnDelete.InvokeAsync(Recipe.Id)">Delete</button>
+            </div>
+        </div>
+    </div>
