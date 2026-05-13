@@ -3,6 +3,8 @@
     [Parameter] public EventCallback<string> UniversalSearchChanged { get; set; }
     [Parameter] public string SelectedCategory { get; set; } = "All";
     [Parameter] public EventCallback<string> SelectedCategoryChanged { get; set; }
+    [Parameter] public int MaxCalories { get; set; } = 0;
+    [Parameter] public EventCallback<int> MaxCaloriesChanged { get; set; }
     [Parameter] public List<Category> Categories { get; set; } = new();
     [Parameter] public EventCallback OnReset { get; set; }
 }
@@ -17,6 +19,30 @@
         background: var(--card-bg);
         border: 1px solid var(--card-border);
         border-radius: 18px;
+    }
+
+    .calorie-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 0.5rem;
+    }
+
+    .filter-text {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        white-space: nowrap;
+        text-transform: lowercase;
+    }
+
+    .calorie-input {
+        flex: 0 0 100px !important;
+        width: 100px !important;
+    }
+
+    .calorie-input input {
+        text-align: center;
+        padding: 0.75rem 0.5rem !important;
     }
 
     .search-input {
@@ -84,7 +110,7 @@
     <div class="search-input">
         <span class="search-icon">🔍</span>
         <input type="text" @bind="UniversalSearch" @bind:after="async () => await UniversalSearchChanged.InvokeAsync(UniversalSearch)"
-               placeholder="Search by name, ingredient, or calories..." />
+               placeholder="Search by name or ingredient..." />
     </div>
     <InputSelect @bind-Value="SelectedCategory" @bind-Value:after="async () => await SelectedCategoryChanged.InvokeAsync(SelectedCategory)">
         <option value="All">All</option>
@@ -93,5 +119,13 @@
             <option value="@cat.Name">@cat.Name</option>
         }
     </InputSelect>
+    <div class="calorie-filter-group">
+        <span class="filter-text">Below</span>
+        <div class="search-input calorie-input">
+            <input type="number" @bind="MaxCalories" @bind:after="async () => await MaxCaloriesChanged.InvokeAsync(MaxCalories)"
+                   placeholder="kcal..." />
+        </div>
+        <span class="filter-text">kcal</span>
+    </div>
     <button class="btn btn-secondary" @onclick="OnReset">Reset</button>
 </div>

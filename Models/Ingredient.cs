@@ -14,11 +14,8 @@ public class Ingredient
     /// <summary>Calories par unité de mesure de référence (ex: kcal/100g)</summary>
     public double CaloriesPerUnit { get; set; }
 
-    [Required]
-    // Unité de référence pour les calories et le prix (ex: "100g", "1 pièce")
-    public int UnitId { get; set; }
-    [ForeignKey("UnitId")]
-    public Unit Unit { get; set; } = null!;
+    [Required(ErrorMessage = "L'unité est obligatoire")]
+    public string Unit { get; set; } = "grams"; // "grams" or "ml"
 
     public string? Description { get; set; }
 

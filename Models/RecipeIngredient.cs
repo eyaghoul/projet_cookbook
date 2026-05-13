@@ -18,8 +18,7 @@ public class RecipeIngredient
     /// <summary>Quantité utilisée dans la recette</summary>
     public double Quantity { get; set; }
 
-    /// <summary>Unité utilisée dans la recette (peut différer de l'unité de référence de l'ingrédient)</summary>
-    public int UnitId { get; set; }
-    public Unit Unit { get; set; } = null!;
+    /// <summary>Unité utilisée dans la recette</summary>
+    public string Unit { get; set; } = "grams"; // "grams" or "ml"
 
 }

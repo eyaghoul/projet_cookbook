@@ -9,15 +9,12 @@
     [Parameter] public EventCallback<string> SelectedTypeCuisineChanged { get; set; }
     [Parameter] public int NumberOfPersons { get; set; } = 1;
     [Parameter] public EventCallback<int> NumberOfPersonsChanged { get; set; }
-    [Parameter] public double CaloriesPerPerson { get; set; }
-    [Parameter] public EventCallback<double> CaloriesPerPersonChanged { get; set; }
     [Parameter] public string Instructions { get; set; } = "";
     [Parameter] public EventCallback<string> InstructionsChanged { get; set; }
     [Parameter] public string ImagePreview { get; set; } = "";
     [Parameter] public List<Category> Categories { get; set; } = new();
     [Parameter] public List<TypeCuisine> TypeCuisines { get; set; } = new();
     [Parameter] public List<Ingredient> AllIngredients { get; set; } = new();
-    [Parameter] public List<Unit> Units { get; set; } = new();
     [Parameter] public List<IngredientRow> Ingredients { get; set; } = new();
     [Parameter] public bool HasError { get; set; }
     [Parameter] public string ErrorMessage { get; set; } = "";
@@ -27,16 +24,6 @@
     [Parameter] public EventCallback OnAddIngredient { get; set; }
     [Parameter] public EventCallback<int> OnRemoveIngredient { get; set; }
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnFileChange { get; set; }
-
-    private Task NameChanged(ChangeEventArgs e) => RecipeNameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
-    private Task CategoryChanged(ChangeEventArgs e) => SelectedCategoryFormChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
-    private Task CuisineChanged(ChangeEventArgs e) => SelectedTypeCuisineChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
-    private Task PersonsChanged(ChangeEventArgs e) => NumberOfPersonsChanged.InvokeAsync(int.TryParse(e.Value?.ToString(), out var n) ? n : 1);
-    private Task CaloriesChanged(ChangeEventArgs e) => CaloriesPerPersonChanged.InvokeAsync(double.TryParse(e.Value?.ToString(), out var d) ? d : 0);
-    private Task StepsChanged(ChangeEventArgs e) => InstructionsChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
-    private static void SetIngredientName(IngredientRow ing, ChangeEventArgs e) => ing.IngredientName = e.Value?.ToString() ?? string.Empty;
-    private static void SetIngredientQty(IngredientRow ing, ChangeEventArgs e) => ing.Quantity = double.TryParse(e.Value?.ToString(), out var q) ? q : 0;
-    private static void SetIngredientUnit(IngredientRow ing, ChangeEventArgs e) => ing.UnitAbbreviation = e.Value?.ToString() ?? string.Empty;
 }
 
 <style>
@@ -94,11 +81,14 @@
             }
             <div class="form-group">
                 <label>Recipe Name *</label>
-                <input type="text" value="@RecipeName" @onchange="NameChanged" placeholder="Enter the recipe name" />
+                <input type="text" value="@RecipeName"
+                       @onchange="e => RecipeNameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                       placeholder="Enter the recipe name" />
             </div>
             <div class="form-group">
                 <label>Category</label>
-                <select value="@SelectedCategoryForm" @onchange="CategoryChanged">
+                <select value="@SelectedCategoryForm"
+                        @onchange="e => SelectedCategoryFormChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
                     @foreach (var cat in Categories)
                     {
                         <option value="@cat.Name">@cat.Name</option>
@@ -107,7 +97,8 @@
             </div>
             <div class="form-group">
                 <label>Cuisine Type</label>
-                <select value="@SelectedTypeCuisine" @onchange="CuisineChanged">
+                <select value="@SelectedTypeCuisine"
+                        @onchange="e => SelectedTypeCuisineChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
                     @foreach (var tc in TypeCuisines)
                     {
                         <option value="@tc.Name">@tc.Name</option>
@@ -117,11 +108,8 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Number of Persons</label>
-                    <input type="number" min="1" value="@NumberOfPersons" @onchange="PersonsChanged" />
-                </div>
-                <div class="form-group">
-                    <label>Calories per Person</label>
-                    <input type="number" min="0" value="@CaloriesPerPerson" @onchange="CaloriesChanged" />
+                    <input type="number" min="1" value="@NumberOfPersons"
+                           @onchange="e => NumberOfPersonsChanged.InvokeAsync(int.TryParse(e.Value?.ToString(), out var n) ? n : 1)" />
                 </div>
             </div>
             <div class="form-group">
@@ -129,20 +117,27 @@
                 @foreach (var (ing, index) in Ingredients.Select((i, idx) => (i, idx)))
                 {
                     <div class="ingredient-row">
-                        <select value="@ing.IngredientName" @onchange="e => SetIngredientName(ing, e)">
+                        <select value="@ing.IngredientName"
+                                @onchange="e => { 
+                                    var name = e.Value?.ToString() ?? string.Empty;
+                                    ing.IngredientName = name;
+                                    var found = AllIngredients.FirstOrDefault(x => x.Name == name);
+                                    if (found != null) {
+                                        ing.UnitAbbreviation = found.Unit;
+                                    }
+                                }">
                             <option value="">Select an ingredient</option>
                             @foreach (var ingredient in AllIngredients)
                             {
                                 <option value="@ingredient.Name">@ingredient.Name</option>
                             }
                         </select>
-                        <input type="number" value="@ing.Quantity" @onchange="e => SetIngredientQty(ing, e)" />
-                        <select value="@ing.UnitAbbreviation" @onchange="e => SetIngredientUnit(ing, e)">
-                            <option value="">Unit</option>
-                            @foreach (var unit in Units)
-                            {
-                                <option value="@unit.Abbreviation">@unit.Abbreviation</option>
-                            }
+                        <input type="number" value="@ing.Quantity"
+                               @onchange="e => { ing.Quantity = double.TryParse(e.Value?.ToString(), out var q) ? q : 0; }" />
+                        <select @bind="ing.UnitAbbreviation">
+                            <option value="grams">grams</option>
+                            <option value="ml">ml</option>
+                            <option value="piece">piece</option>
                         </select>
                         <button type="button" @onclick="() => OnRemoveIngredient.InvokeAsync(index)">❌</button>
                     </div>
@@ -151,7 +146,8 @@
             </div>
             <div class="form-group">
                 <label>Instructions / Steps</label>
-                <textarea rows="4" value="@Instructions" @onchange="StepsChanged"></textarea>
+                <textarea rows="4" value="@Instructions"
+                          @onchange="e => InstructionsChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
             </div>
             <div class="form-group">
                 <label>Recipe Image</label>

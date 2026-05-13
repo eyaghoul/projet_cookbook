@@ -7,9 +7,8 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-   public DbSet<Category>         Categories        => Set<Category>();
+    public DbSet<Category>         Categories        => Set<Category>();
     public DbSet<TypeCuisine>      TypeCuisines      => Set<TypeCuisine>();
-    public DbSet<Unit>             Units             => Set<Unit>();
     public DbSet<Ingredient>       Ingredients       => Set<Ingredient>();
     public DbSet<Recipe>           Recipes           => Set<Recipe>();
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
@@ -32,18 +31,9 @@ public class AppDbContext : DbContext
             .HasForeignKey(ri => ri.IngredientId)
             .OnDelete(DeleteBehavior.Restrict);
  
-        b.Entity<RecipeIngredient>()
-            .HasOne(ri => ri.Unit)
-            .WithMany(u => u.RecipeIngredients)
-            .HasForeignKey(ri => ri.UnitId)
-            .OnDelete(DeleteBehavior.Restrict);
+
  
-        // ── Ingredient → Unit (reference unit) ───────────────────────────────
-        b.Entity<Ingredient>()
-            .HasOne(i => i.Unit)
-            .WithMany(u => u.Ingredients)
-            .HasForeignKey(i => i.UnitId)
-            .OnDelete(DeleteBehavior.Restrict);
+
  
         // ── Recipe → Category ─────────────────────────────────────────────────
         b.Entity<Recipe>()

@@ -17,10 +17,7 @@ public class RecipeService : IRecipeService
             .Include(r => r.Category)
             .Include(r => r.TypeCuisine)
             .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-                    .ThenInclude(i => i.Unit)
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Unit);
+                .ThenInclude(ri => ri.Ingredient);
 
     // ── CRUD ─────────────────────────────────────────────────────────────────
     public async Task<List<Recipe>> GetAllAsync()
@@ -70,15 +67,27 @@ public class RecipeService : IRecipeService
         await using var db = await _factory.CreateDbContextAsync();
 
         recipe.RecipeIngredients = new List<RecipeIngredient>();
+        
+        // Null out navigation properties to avoid EF trying to insert existing entities
+        var category = recipe.Category;
+        var typeCuisine = recipe.TypeCuisine;
+        recipe.Category = null!;
+        recipe.TypeCuisine = null!;
+
         db.Recipes.Add(recipe);
         await db.SaveChangesAsync();
 
         foreach (var ri in ingredients)
         {
             ri.RecipeId = recipe.Id;
+            ri.Ingredient = null!;
             db.RecipeIngredients.Add(ri);
         }
         await db.SaveChangesAsync();
+
+        // Restore navigation properties for the caller if needed
+        recipe.Category = category;
+        recipe.TypeCuisine = typeCuisine;
 
         return recipe;
     }
@@ -87,18 +96,32 @@ public class RecipeService : IRecipeService
     {
         await using var db = await _factory.CreateDbContextAsync();
 
-        // Remove old ingredients
-        var oldItems = db.RecipeIngredients.Where(ri => ri.RecipeId == recipe.Id);
-        db.RecipeIngredients.RemoveRange(oldItems);
+        var existing = await db.Recipes
+            .Include(r => r.RecipeIngredients)
+            .FirstOrDefaultAsync(r => r.Id == recipe.Id);
 
-        recipe.RecipeIngredients = new List<RecipeIngredient>();
-        db.Recipes.Update(recipe);
+        if (existing == null) return;
 
+        // Update scalar properties
+        existing.Name = recipe.Name;
+        existing.CategoryId = recipe.CategoryId;
+        existing.TypeCuisineId = recipe.TypeCuisineId;
+        existing.NumberOfPersons = recipe.NumberOfPersons;
+        existing.CookingMethod = recipe.CookingMethod;
+        existing.ImageUrl = recipe.ImageUrl;
+
+        // Update ingredients: simpler to clear and re-add for this scale
+        db.RecipeIngredients.RemoveRange(existing.RecipeIngredients);
+        
         foreach (var ri in ingredients)
         {
             ri.RecipeId = recipe.Id;
+            // Ensure we don't try to insert existing objects if they are attached to ri
+            ri.Ingredient = null!; 
+
             db.RecipeIngredients.Add(ri);
         }
+
         await db.SaveChangesAsync();
     }
 

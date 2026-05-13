@@ -1,30 +1,207 @@
+<style>
+    .recipe-detail-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 1050;
+    }
+
+    .recipe-detail-modal {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        gap: 2rem;
+        width: min(100%, 900px);
+        max-height: calc(100vh - 3rem);
+        overflow-y: auto;
+        border-radius: 22px;
+        background: #0d1219;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 2rem;
+    }
+
+    .recipe-detail-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        border: none;
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        font-size: 1.5rem;
+        line-height: 1;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: background 0.2s;
+    }
+
+    .recipe-detail-close:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .recipe-detail-image-section {
+        width: 380px;
+        max-width: 40%;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-width: 240px;
+    }
+
+    .recipe-detail-image-container {
+        overflow: hidden;
+        border-radius: 18px;
+        min-height: 280px;
+        max-height: 400px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .recipe-detail-image {
+        width: 100%;
+        height: 100%;
+        max-height: 400px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .recipe-detail-rating-label {
+        color: #FF6B35;
+        font-weight: 600;
+    }
+
+    .recipe-detail-rating {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .recipe-detail-rating-value {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #eef2f7;
+    }
+
+    .recipe-detail-stars {
+        color: #FF6B35;
+        font-size: 1.2rem;
+        letter-spacing: 0.05rem;
+    }
+
+    .recipe-detail-content {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        color: #eef2f7;
+        font-size: 1rem;
+    }
+
+    .recipe-detail-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .recipe-detail-name {
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: #FF6B35;
+    }
+
+    .recipe-detail-meta {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        color: #cbd5e1;
+        font-size: 0.95rem;
+    }
+
+    .recipe-detail-section {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .recipe-detail-field {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .recipe-detail-divider {
+        border-top: 1px solid rgba(255, 107, 53, 0.3);
+    }
+
+    .recipe-detail-ingredients {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .recipe-detail-ingredient-row {
+        display: grid;
+        grid-template-columns: 1.6fr 0.9fr 0.9fr;
+        gap: 0.75rem;
+        color: #eef2f7;
+        font-size: 0.98rem;
+    }
+
+    .recipe-detail-ingredient-name {
+        border-left: 3px solid #FF6B35;
+        padding-left: 0.7rem;
+    }
+
+    .recipe-detail-instructions {
+        white-space: pre-wrap;
+    }
+
+    .recipe-detail-empty {
+        color: rgba(255, 255, 255, 0.65);
+    }
+
+    .recipe-detail-image-empty {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.6);
+    }
+</style>
+
 @using CookBook.Models
 
 @if (Recipe is not null)
 {
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:1.5rem;z-index:1050;" @onclick="Close">
-        <div style="position:relative;display:flex;flex-direction:row;gap:2rem;width:min(100%,900px);max-height:calc(100vh - 3rem);overflow-y:auto;border-radius:22px;background:#0d1219;border:1px solid rgba(255,255,255,0.08);padding:2rem;" @onclick:stopPropagation>
-            <button type="button" @onclick="Close"
-                    style="position:absolute;top:1rem;right:1rem;border:none;background:rgba(255,255,255,0.06);color:#fff;font-size:1.5rem;line-height:1;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;transition:background 0.2s;"
-                    onmouseover="this.style.background='rgba(255,255,255,0.12)'"
-                    onmouseout="this.style.background='rgba(255,255,255,0.06)'">&times;</button>
+    <div class="recipe-detail-backdrop" @onclick="Close">
+        <div class="recipe-detail-modal" @onclick:stopPropagation>
+            <button type="button" class="recipe-detail-close" @onclick="Close">&times;</button>
 
-            <div style="width:380px;max-width:40%;flex-shrink:0;display:flex;flex-direction:column;gap:1rem;min-width:240px;">
-                <div style="overflow:hidden;border-radius:18px;min-height:280px;max-height:400px;background:rgba(255,255,255,0.03);">
+            <div class="recipe-detail-image-section">
+                <div class="recipe-detail-image-container">
                     @if (!string.IsNullOrWhiteSpace(Recipe.ImageUrl))
                     {
-                        <img src="@Recipe.ImageUrl" alt="Recipe image" style="width:100%;height:100%;max-height:400px;object-fit:cover;display:block;" />
+                        <img src="@Recipe.ImageUrl" alt="Recipe image" class="recipe-detail-image" />
                     }
                     else
                     {
-                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);">Not specified</div>
+                        <div class="recipe-detail-image-empty">Not specified</div>
                     }
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.35rem;">
-                    <div style="color:#FF6B35;font-weight:600;">Average Rating</div>
-                    <div style="display:flex;align-items:center;gap:0.5rem;color:#eef2f7;">
+                <div class="recipe-detail-rating">
+                    <div class="recipe-detail-rating-label">Average Rating</div>
+                    <div class="recipe-detail-rating-value">
                         <span>@((AverageRating > 0) ? $"{AverageRating:0.0}/5" : "Not rated yet")</span>
-                        <span style="color:#FF6B35;font-size:1.2rem;letter-spacing:0.05rem;">
+                        <span class="recipe-detail-stars">
                             @for (var i = 1; i <= 5; i++)
                             {
                                 <text>@(i <= Math.Round(AverageRating) ? "★" : "☆")</text>
@@ -34,57 +211,61 @@
                 </div>
             </div>
 
-            <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1rem;color:#eef2f7;font-size:1rem;">
-                <div>
-                    <div style="font-size:1.9rem;font-weight:700;color:#FF6B35;margin-bottom:0.4rem;">@(string.IsNullOrWhiteSpace(Recipe.Name) ? "Not specified" : Recipe.Name)</div>
-                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;color:#cbd5e1;font-size:0.95rem;">
-                        <span>@(!string.IsNullOrWhiteSpace(Recipe.Category?.Name) ? Recipe.Category.Name : "Not specified")</span>
-                        <span>@(!string.IsNullOrWhiteSpace(Recipe.TypeCuisine?.Name) ? Recipe.TypeCuisine.Name : "Not specified")</span>
-                    </div>
-                </div>
-
-                <div style="display:grid;gap:1rem;">
-                    <div style="display:grid;gap:0.35rem;">
-                        <div style="color:#FF6B35;font-weight:600;">Calories per person</div>
-                        <div>@(Recipe.CaloriesPerPerson > 0 ? Math.Round(Recipe.CaloriesPerPerson).ToString() : "Not specified")</div>
-                    </div>
-                    <div style="display:grid;gap:0.35rem;">
-                        <div style="color:#FF6B35;font-weight:600;">Number of persons</div>
-                        <div>@(Recipe.NumberOfPersons > 0 ? Recipe.NumberOfPersons.ToString() : "Not specified")</div>
+            <div class="recipe-detail-content">
+                <div class="recipe-detail-header">
+                    <div class="recipe-detail-name">@(string.IsNullOrWhiteSpace(Recipe.Name) ? "Not specified" :
+                                            Recipe.Name)</div>
+                        <div class="recipe-detail-meta">
+                            <span>@(!string.IsNullOrWhiteSpace(Recipe.Category?.Name) ? Recipe.Category.Name : "Not specified")</span>
+                            <span>@(!string.IsNullOrWhiteSpace(Recipe.TypeCuisine?.Name) ? Recipe.TypeCuisine.Name : "Not specified")</span>
+                        </div>
                     </div>
 
-                    <div style="border-top:1px solid rgba(255,107,53,0.3);"></div>
-                    <div style="display:grid;gap:0.65rem;">
-                        <div style="color:#FF6B35;font-weight:600;">Ingredients *</div>
-                        @if (Recipe.RecipeIngredients?.Any() == true)
-                        {
-                            <div style="display:grid;gap:0.55rem;">
-                                @foreach (var ingredient in Recipe.RecipeIngredients)
-                                {
-                                    <div style="display:grid;grid-template-columns:1.6fr 0.9fr 0.9fr;gap:0.75rem;color:#eef2f7;font-size:0.98rem;">
-                                        <span style="border-left:3px solid #FF6B35;padding-left:0.7rem;">@(!string.IsNullOrWhiteSpace(ingredient.Ingredient?.Name) ? ingredient.Ingredient.Name : "Not specified")</span>
-                                        <span>@(ingredient.Quantity > 0 ? ingredient.Quantity.ToString() : "—")</span>
-                                        <span>@(!string.IsNullOrWhiteSpace(ingredient.Unit?.Abbreviation) ? ingredient.Unit.Abbreviation : "—")</span>
-                                    </div>
-                                }
-                            </div>
-                        }
+                    <div class="recipe-detail-section">
+                        <div class="recipe-detail-field">
+                            <div class="recipe-detail-rating-label">Calories per person</div>
+                            <div>@(Recipe.CaloriesPerPerson > 0 ? Math.Round(Recipe.CaloriesPerPerson).ToString() : "Not specified")</div>
+                        </div>
+                        <div class="recipe-detail-field">
+                            <div class="recipe-detail-rating-label">Number of persons</div>
+                            <div>@(Recipe.NumberOfPersons > 0 ? Recipe.NumberOfPersons.ToString() : "Not specified")</div>
+                        </div>
+
+                        <div class="recipe-detail-divider"></div>
+                        <div class="recipe-detail-field">
+                            <div class="recipe-detail-rating-label">Ingredients *</div>
+                            @if (Recipe.RecipeIngredients?.Any() == true)
+                            {
+                                <div class="recipe-detail-ingredients">
+                                    @foreach (var ingredient in Recipe.RecipeIngredients)
+                                    {
+                                        <div class="recipe-detail-ingredient-row">
+                                            <span
+                                                class="recipe-detail-ingredient-name">@(!string.IsNullOrWhiteSpace(ingredient.Ingredient?.Name)
+                                                                                ? ingredient.Ingredient.Name : "Not specified")</span>
+                                                <span>@(ingredient.Quantity > 0 ? ingredient.Quantity.ToString() : "—")</span>
+                                                <span>@(!string.IsNullOrWhiteSpace(ingredient.Unit) ?
+                                                                                    ingredient.Unit : "—")</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                         else
-                        {
-                            <div style="color:rgba(255,255,255,0.65);">Not specified</div>
-                        }
-                    </div>
+                                    {
+                                        <div class="recipe-detail-empty">Not specified</div>
+                                    }
+                                </div>
 
-                    <div style="border-top:1px solid rgba(255,107,53,0.3);"></div>
-                    <div style="display:grid;gap:0.35rem;">
-                        <div style="color:#FF6B35;font-weight:600;">Instructions / steps</div>
-                        <div style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Recipe.CookingMethod) ? "Not specified" : Recipe.CookingMethod)</div>
+                                <div class="recipe-detail-divider"></div>
+                                <div class="recipe-detail-field">
+                                    <div class="recipe-detail-rating-label">Instructions / steps</div>
+                                    <div class="recipe-detail-instructions">@(string.IsNullOrWhiteSpace(Recipe.CookingMethod) ? "Not specified" : Recipe.CookingMethod)</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-}
+            }
 
 @code {
     [Parameter] public Recipe? Recipe { get; set; }

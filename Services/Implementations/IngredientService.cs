@@ -15,7 +15,6 @@ public class IngredientService : IIngredientService
     {
         await using var db = await _factory.CreateDbContextAsync();
         return await db.Ingredients
-            .Include(i => i.Unit)
             .AsNoTracking()
             .OrderBy(i => i.Name)
             .ToListAsync();
@@ -25,7 +24,6 @@ public class IngredientService : IIngredientService
     {
         await using var db = await _factory.CreateDbContextAsync();
         return await db.Ingredients
-            .Include(i => i.Unit)
             .AsNoTracking()
             .FirstOrDefaultAsync(i => i.Id == id);
     }

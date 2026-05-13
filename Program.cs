@@ -11,15 +11,18 @@ builder.Services.AddRazorComponents()
 
 // ── EF Core SQLite ────────────────────────────────────────────────────────────
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
+{
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-                      ?? "Data Source=app.db"));
+                      ?? "Data Source=app.db");
+    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<IRecipeService,     RecipeService>();
 builder.Services.AddScoped<IIngredientService, IngredientService>();
 builder.Services.AddScoped<ICategoryService,   CategoryService>();
 builder.Services.AddScoped<ITypeCuisineService, TypeCuisineService>();
-builder.Services.AddScoped<IUnitService,        UnitService>();
+
 
 var app = builder.Build();
 
@@ -27,7 +30,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    db.Database.EnsureCreated();
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────

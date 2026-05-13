@@ -170,8 +170,7 @@
         <div class="ingredients-list">
             @foreach (var ingredient in Recipe.RecipeIngredients)
             {
-                <span class="ingredient-chip">@ingredient.Quantity @ingredient.Unit?.Abbreviation
-                    @ingredient.Ingredient?.Name</span>
+                <span class="ingredient-chip">@ingredient.Quantity @ingredient.Unit @ingredient.Ingredient?.Name</span>
                 }
             </div>
             <div class="rating-board">

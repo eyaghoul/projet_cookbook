@@ -3,7 +3,6 @@
 @inject IRecipeService RecipeService
 @inject ICategoryService CategoryService
 @inject IIngredientService IngredientService
-@inject IUnitService UnitService
 @inject ITypeCuisineService TypeCuisineService
 @inject IJSRuntime JSRuntime
 
@@ -33,6 +32,8 @@ else
                      UniversalSearchChanged="@(v => { universalSearch = v; StateHasChanged(); })"
                      SelectedCategory="@selectedCategory"
                      SelectedCategoryChanged="@(v => { selectedCategory = v; StateHasChanged(); })"
+                     MaxCalories="@maxCalories"
+                     MaxCaloriesChanged="@(v => { maxCalories = v; StateHasChanged(); })"
                      Categories="@categories" OnReset="ResetFilters" />
 
     @if (!FilteredRecipes.Any())
@@ -72,11 +73,10 @@ else
                      SelectedCategoryForm="@selectedCategoryForm" SelectedCategoryFormChanged="@(v => selectedCategoryForm = v)"
                      SelectedTypeCuisine="@selectedTypeCuisine" SelectedTypeCuisineChanged="@(v => selectedTypeCuisine = v)"
                      NumberOfPersons="@numberOfPersons" NumberOfPersonsChanged="@(v => numberOfPersons = v)"
-                     CaloriesPerPerson="@caloriesPerPerson" CaloriesPerPersonChanged="@(v => caloriesPerPerson = v)"
                      Instructions="@instructions" InstructionsChanged="@(v => instructions = v)"
                      ImagePreview="@imagePreview"
                      Categories="@categories" TypeCuisines="@typeCuisines"
-                     AllIngredients="@allIngredients" Units="@units"
+                     AllIngredients="@allIngredients"
                      Ingredients="@ingredients" HasError="@hasError" ErrorMessage="@errorMessage"
                      OnSave="SaveRecipe" OnCancel="CloseModal" OnBackdropClick="CloseModal"
                      OnAddIngredient="AddIngredient" OnRemoveIngredient="RemoveIngredient"
@@ -88,10 +88,10 @@ else
     private List<Recipe> recipes = new();
     private List<Category> categories = new();
     private List<Ingredient> allIngredients = new();
-    private List<Unit> units = new();
     private List<TypeCuisine> typeCuisines = new();
     private string universalSearch = string.Empty;
     private string selectedCategory = "All";
+    private int maxCalories = 0;
     private readonly Dictionary<int, RatingRecord> ratings = new();
     private readonly Dictionary<int, int> hoverRatings = new();
 
@@ -103,19 +103,20 @@ else
     private string recipeName = "", selectedCategoryForm = "", selectedTypeCuisine = "";
     private string instructions = "", imagePreview = "", errorMessage = "";
     private int numberOfPersons = 1;
-    private double caloriesPerPerson;
-    private IBrowserFile? uploadedFile;
     private List<IngredientRow> ingredients = new();
 
     private IEnumerable<Recipe> FilteredRecipes => recipes
         .Where(r =>
         {
+            // If search is empty, return all; otherwise filter by name or ingredients
             if (string.IsNullOrWhiteSpace(universalSearch)) return true;
-            if (int.TryParse(universalSearch.Trim(), out var cal)) return Math.Abs(r.CaloriesPerPerson - cal) <= 50;
             return r.Name.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) ||
                    r.RecipeIngredients.Any(ri => ri.Ingredient?.Name?.Contains(universalSearch, StringComparison.OrdinalIgnoreCase) == true);
         })
+        // Filter by category
         .Where(r => selectedCategory == "All" || string.Equals(r.Category?.Name, selectedCategory, StringComparison.OrdinalIgnoreCase))
+        // Filter by calories: show recipes BELOW or EQUAL to the entered kcal value
+        .Where(r => maxCalories <= 0 || r.CaloriesPerPerson <= (double)maxCalories)
         .ToList();
 
     protected override async Task OnInitializedAsync() { await LoadData(); isLoading = false; }
@@ -125,7 +126,6 @@ else
         recipes = await RecipeService.GetAllAsync();
         categories = await CategoryService.GetAllAsync();
         allIngredients = await IngredientService.GetAllAsync();
-        units = await UnitService.GetAllAsync();
         typeCuisines = await TypeCuisineService.GetAllAsync();
         ResetForm();
     }
@@ -147,20 +147,19 @@ else
     private void RemoveIngredient(int i) { if (i >= 0 && i < ingredients.Count) ingredients.RemoveAt(i); }
     private async Task HandleFileChange(InputFileChangeEventArgs e)
     {
-        uploadedFile = e.File;
-        if (uploadedFile is not null)
+        if (e.File is not null)
         {
-            using var stream = uploadedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var bytes = new byte[uploadedFile.Size];
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var bytes = new byte[e.File.Size];
             await stream.ReadAsync(bytes);
-            imagePreview = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
+            imagePreview = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(bytes)}";
         }
     }
 
     // Modal
     private void OpenAddRecipeModal() { isEditMode = false; editingRecipeId = 0; showAddRecipeModal = true; ResetForm(); }
     private void CloseModal() { showAddRecipeModal = false; ResetForm(); }
-    private void ResetFilters() { universalSearch = string.Empty; selectedCategory = "All"; }
+    private void ResetFilters() { universalSearch = string.Empty; selectedCategory = "All"; maxCalories = 0; }
     private void CloseRecipeDetails() { showRecipeDetails = false; selectedRecipe = null; }
     private void OpenRecipeDetails(Recipe recipe)
     {
@@ -175,14 +174,13 @@ else
         selectedCategoryForm = recipe.Category?.Name ?? categories.FirstOrDefault()?.Name ?? "";
         selectedTypeCuisine = recipe.TypeCuisine?.Name ?? typeCuisines.FirstOrDefault()?.Name ?? "";
         numberOfPersons = recipe.NumberOfPersons;
-        caloriesPerPerson = recipe.CaloriesPerPerson;
         instructions = recipe.CookingMethod;
         imagePreview = recipe.ImageUrl ?? string.Empty;
         ingredients = recipe.RecipeIngredients.Select(ri => new IngredientRow
         {
             IngredientName = ri.Ingredient?.Name ?? "",
             Quantity = ri.Quantity,
-            UnitAbbreviation = ri.Unit?.Abbreviation ?? ""
+            UnitAbbreviation = ri.Unit
         }).ToList();
         showAddRecipeModal = true;
     }
@@ -192,49 +190,88 @@ else
         await RecipeService.DeleteAsync(id);
         recipes.RemoveAll(r => r.Id == id);
     }
+
+    // Validation helper
+    private bool Fail(string msg) { hasError = true; errorMessage = msg; return true; }
+
     private async Task SaveRecipe()
     {
-        hasError = false;
-        if (string.IsNullOrWhiteSpace(recipeName)) { hasError = true; errorMessage = "Recipe name is required."; return; }
-        if (!ingredients.Any(i => !string.IsNullOrWhiteSpace(i.IngredientName))) { hasError = true; errorMessage = "At least one ingredient is required."; return; }
+        try 
+        {
+            hasError = false;
+            errorMessage = "";
+            
+            if (string.IsNullOrWhiteSpace(recipeName) && Fail("Recipe name is required.")) return;
+            if (numberOfPersons <= 0 && Fail("Number of servings must be > 0.")) return;
+            if (string.IsNullOrWhiteSpace(selectedCategoryForm) && Fail("Category is required.")) return;
+            if (string.IsNullOrWhiteSpace(selectedTypeCuisine) && Fail("Cuisine type is required.")) return;
+            
+            var validIngredients = ingredients.Where(i => !string.IsNullOrWhiteSpace(i.IngredientName)).ToList();
+            if (!validIngredients.Any() && Fail("At least one ingredient is required.")) return;
+            
+            var category = categories.FirstOrDefault(c => c.Name == selectedCategoryForm) ?? new Category { Name = selectedCategoryForm };
+            var typeCuisine = typeCuisines.FirstOrDefault(t => t.Name == selectedTypeCuisine) ?? new TypeCuisine { Name = selectedTypeCuisine };
+            
+            var recipeIngredients = validIngredients
+                .Select(i =>
+                {
+                    var ing = allIngredients.FirstOrDefault(x => x.Name == i.IngredientName);
+                    return new { ing, i };
+                })
+                .Where(x => x.ing != null)
+                .GroupBy(x => x.ing!.Id)
+                .Select(g => new RecipeIngredient
+                {
+                    IngredientId = g.Key,
+                    Quantity = g.Sum(x => x.i.Quantity),
+                    Unit = g.First().i.UnitAbbreviation
+                }).ToList();
 
-        var category = categories.FirstOrDefault(c => c.Name == selectedCategoryForm) ?? new Category { Name = selectedCategoryForm };
-        var typeCuisine = typeCuisines.FirstOrDefault(t => t.Name == selectedTypeCuisine) ?? new TypeCuisine { Name = selectedTypeCuisine };
-        var recipeIngredients = ingredients
-            .Where(i => !string.IsNullOrWhiteSpace(i.IngredientName))
-            .Select(i => new RecipeIngredient
+            var toSave = new Recipe
             {
-                Ingredient = allIngredients.First(ing => ing.Name == i.IngredientName),
-                Quantity = i.Quantity,
-                Unit = units.FirstOrDefault(u => u.Abbreviation == i.UnitAbbreviation)
-            }).ToList();
+                Id = editingRecipeId,
+                Name = recipeName,
+                CategoryId = category.Id,
+                TypeCuisineId = typeCuisine.Id,
+                NumberOfPersons = numberOfPersons,
+                CookingMethod = instructions,
+                ImageUrl = imagePreview
+            };
 
-        var toSave = new Recipe
-        {
-            Id = editingRecipeId, Name = recipeName, Category = category, TypeCuisine = typeCuisine,
-            NumberOfPersons = numberOfPersons, CookingMethod = instructions,
-            ImageUrl = imagePreview, RecipeIngredients = new List<RecipeIngredient>()
-        };
-
-        if (isEditMode && editingRecipeId > 0)
-        {
-            await RecipeService.UpdateAsync(toSave, recipeIngredients);
-            var idx = recipes.FindIndex(r => r.Id == editingRecipeId);
-            if (idx >= 0) recipes[idx] = toSave;
+            if (isEditMode && editingRecipeId > 0)
+            {
+                await RecipeService.UpdateAsync(toSave, recipeIngredients);
+            }
+            else
+            {
+                await RecipeService.AddAsync(toSave, recipeIngredients);
+            }
+            
+            recipes = await RecipeService.GetAllAsync();
+            showAddRecipeModal = false;
+            isEditMode = false;
+            editingRecipeId = 0;
+            ResetForm();
+            StateHasChanged();
         }
-        else
+        catch (Exception ex)
         {
-            await RecipeService.AddAsync(toSave, recipeIngredients);
-            recipes.Add(toSave);
+            Fail($"An unexpected error occurred: {ex.Message}");
+            StateHasChanged();
         }
-        showAddRecipeModal = false; isEditMode = false; editingRecipeId = 0; ResetForm();
     }
+
     private void ResetForm()
     {
-        recipeName = ""; selectedCategoryForm = ""; selectedTypeCuisine = "";
-        numberOfPersons = 1; caloriesPerPerson = 0;
-        instructions = ""; imagePreview = ""; uploadedFile = null;
-        ingredients.Clear(); hasError = false; errorMessage = "";
+        recipeName = "";
+        selectedCategoryForm = categories.FirstOrDefault()?.Name ?? "";
+        selectedTypeCuisine = typeCuisines.FirstOrDefault()?.Name ?? "";
+        numberOfPersons = 1;
+        instructions = "";
+        imagePreview = "";
+        ingredients.Clear();
+        hasError = false;
+        errorMessage = "";
     }
 
     private class RatingRecord { public int Votes { get; set; } public int Sum { get; set; } }
