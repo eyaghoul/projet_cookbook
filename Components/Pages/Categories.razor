@@ -1,7 +1,8 @@
 @page "/categories"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-header">
     <div>
@@ -35,14 +36,17 @@ else
                         <td>@category.Id</td>
                         <td><span class="badge category">@category.Name</span></td>
                         <td>
-                            <div class="card-actions">
-                                <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(category)">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCategory(category.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                            @if (isAdmin || (currentUserId != null && category.UserId == currentUserId))
+                            {
+                                <div class="card-actions">
+                                    <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(category)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCategory(category.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            }
                         </td>
                     </tr>
                 }
@@ -79,9 +83,15 @@ else
     private List<Category> categories;
     private Category editingCategory = new();
     private bool isModalOpen = false;
+    private string? currentUserId;
+    private bool isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        currentUserId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        isAdmin = user.IsInRole("Admin");
         await LoadCategories();
     }
 
@@ -101,7 +111,8 @@ else
         editingCategory = new Category
         {
             Id = category.Id,
-            Name = category.Name
+            Name = category.Name,
+            UserId = category.UserId // Preserve owner
         };
         isModalOpen = true;
     }
@@ -115,6 +126,7 @@ else
     {
         if (editingCategory.Id == 0)
         {
+            editingCategory.UserId = currentUserId; // Set owner
             await CategoryService.AddAsync(editingCategory);
         }
         else

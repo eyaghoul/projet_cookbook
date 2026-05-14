@@ -1,12 +1,13 @@
 @page "/recipes"
 @using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
 @rendermode InteractiveServer
 @inject IRecipeService RecipeService
 @inject ICategoryService CategoryService
 @inject IIngredientService IngredientService
 @inject ITypeCuisineService TypeCuisineService
+@inject IRatingService RatingService
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
 
 <style>
     .add-recipe-section { display: flex; justify-content: flex-end; margin-bottom: 16px; }
@@ -26,11 +27,15 @@
 }
 else
 {
-    <AuthorizeView Roles="Admin">
-        <div class="add-recipe-section">
-            <button class="btn btn-primary" @onclick="OpenAddRecipeModal">+ Add Recipe</button>
-        </div>
-    </AuthorizeView>
+    <div class="add-recipe-section">
+        <AuthorizeView>
+            <Authorized>
+                <button class="btn btn-primary add-recipe-btn" @onclick="OpenAddRecipeModal">
+                    <i class="fas fa-plus"></i> Add Recipe
+                </button>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 
     <RecipeFilterBar UniversalSearch="@universalSearch"
                      UniversalSearchChanged="@(v => { universalSearch = v; StateHasChanged(); })"
@@ -96,7 +101,6 @@ else
     private string universalSearch = string.Empty;
     private string selectedCategory = "All";
     private int maxCalories = 0;
-    private readonly Dictionary<int, RatingRecord> ratings = new();
     private readonly Dictionary<int, int> hoverRatings = new();
 
     // Modal state
@@ -137,13 +141,40 @@ else
     // Ratings
     private void SetHover(int id, int star) => hoverRatings[id] = star;
     private void ClearHover(int id) => hoverRatings[id] = 0;
-    private int GetVoteCount(int id) => ratings.TryGetValue(id, out var r) ? r.Votes : 0;
-    private double GetAverageRating(int id) => ratings.TryGetValue(id, out var r) && r.Votes > 0 ? Math.Round(r.Sum / (double)r.Votes, 1) : 0;
-    private int GetCurrentRating(int id) => ratings.TryGetValue(id, out var r) && r.Votes > 0 ? (int)Math.Round(r.Sum / (double)r.Votes) : 0;
-    private void RateRecipe(int id, int star)
+    
+    private int GetVoteCount(int id) 
     {
-        if (!ratings.TryGetValue(id, out var rec)) { rec = new RatingRecord(); ratings[id] = rec; }
-        rec.Votes++; rec.Sum += star;
+        var recipe = recipes.FirstOrDefault(r => r.Id == id);
+        return recipe?.Ratings?.Count ?? 0;
+    }
+
+    private double GetAverageRating(int id) 
+    {
+        var recipe = recipes.FirstOrDefault(r => r.Id == id);
+        if (recipe?.Ratings == null || !recipe.Ratings.Any()) return 0;
+        return Math.Round(recipe.Ratings.Average(r => r.Stars), 1);
+    }
+
+    private int GetCurrentRating(int id) 
+    {
+        var recipe = recipes.FirstOrDefault(r => r.Id == id);
+        if (recipe?.Ratings == null || !recipe.Ratings.Any()) return 0;
+        return (int)Math.Round(recipe.Ratings.Average(r => r.Stars));
+    }
+
+    private async Task RateRecipe(int id, int star)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            await RatingService.AddRatingAsync(id, userId, star);
+            // Refresh data to show updated average
+            recipes = await RecipeService.GetAllAsync();
+            StateHasChanged();
+        }
     }
 
     // Ingredients
@@ -231,6 +262,10 @@ else
                     Unit = g.First().i.UnitAbbreviation
                 }).ToList();
 
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var currentUserId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
             var toSave = new Recipe
             {
                 Id = editingRecipeId,
@@ -239,11 +274,19 @@ else
                 TypeCuisineId = typeCuisine.Id,
                 NumberOfPersons = numberOfPersons,
                 CookingMethod = instructions,
-                ImageUrl = imagePreview
+                ImageUrl = imagePreview,
+                UserId = currentUserId // Set the owner
             };
 
             if (isEditMode && editingRecipeId > 0)
             {
+                // When editing, we should probably keep the original owner unless we want to change it.
+                // For now, let's just make sure we don't wipe it out if it's already there.
+                var existing = recipes.FirstOrDefault(r => r.Id == editingRecipeId);
+                if (existing != null)
+                {
+                    toSave.UserId = existing.UserId;
+                }
                 await RecipeService.UpdateAsync(toSave, recipeIngredients);
             }
             else
@@ -278,5 +321,4 @@ else
         errorMessage = "";
     }
 
-    private class RatingRecord { public int Votes { get; set; } public int Sum { get; set; } }
 }

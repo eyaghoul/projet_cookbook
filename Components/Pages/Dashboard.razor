@@ -245,13 +245,8 @@ else
         var catGroups = recipes.GroupBy(r => r.Category?.Name ?? "Other")
                               .Select(g => new { Name = g.Key, Count = g.Count() }).ToList();
         
-        var catColors = catGroups.Select(g => g.Name switch {
-            "breakfast" => "#FF6B35",
-            "lunch" => "#1E90FF",
-            "dinner" => "#FF69B4",
-            "dessert" => "#F39C12",
-            _ => "#9B59B6"
-        }).ToArray();
+        var palette = new[] { "#FF6B35", "#1E90FF", "#FF69B4", "#F39C12", "#26C281", "#9B59B6", "#00CEC9", "#6C5CE7" };
+        var catColors = catGroups.Select((g, i) => palette[i % palette.Length]).ToArray();
 
         await JS.InvokeVoidAsync("renderChart", "categoryPie", "doughnut", 
             catGroups.Select(g => g.Name).ToArray(), 

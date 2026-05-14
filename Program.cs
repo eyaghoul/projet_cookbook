@@ -36,6 +36,7 @@ builder.Services.AddScoped<IRecipeService,     RecipeService>();
 builder.Services.AddScoped<IIngredientService, IngredientService>();
 builder.Services.AddScoped<ICategoryService,   CategoryService>();
 builder.Services.AddScoped<ITypeCuisineService, TypeCuisineService>();
+builder.Services.AddScoped<IRatingService, RatingService>();
 
 
 var app = builder.Build();

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -7,6 +8,11 @@ public class Recipe
 {
     [Key]
     public int Id { get; set; }
+    
+    public string? UserId { get; set; }
+    
+    [ForeignKey("UserId")]
+    public IdentityUser? User { get; set; }
     [Required(ErrorMessage = "Le nom de la recette est obligatoire")]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
@@ -30,6 +36,7 @@ public class Recipe
     [ForeignKey("TypeCuisineId")]
     public TypeCuisine TypeCuisine { get; set; }
     public ICollection<RecipeIngredient> RecipeIngredients { get; set; } = new List<RecipeIngredient>();
+    public ICollection<Rating> Ratings { get; set; } = new List<Rating>();
  
 
    

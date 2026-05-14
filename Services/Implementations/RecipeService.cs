@@ -16,6 +16,7 @@ public class RecipeService : IRecipeService
         db.Recipes
             .Include(r => r.Category)
             .Include(r => r.TypeCuisine)
+            .Include(r => r.Ratings)
             .Include(r => r.RecipeIngredients)
                 .ThenInclude(ri => ri.Ingredient);
 

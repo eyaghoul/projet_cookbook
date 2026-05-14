@@ -1,7 +1,8 @@
 @page "/typecuisines"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject ITypeCuisineService TypeCuisineService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-header">
     <div>
@@ -35,14 +36,17 @@ else
                         <td>@cuisine.Id</td>
                         <td><span class="badge cuisine">@cuisine.Name</span></td>
                         <td>
-                            <div class="card-actions">
-                                <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(cuisine)">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCuisine(cuisine.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                            @if (isAdmin || (currentUserId != null && cuisine.UserId == currentUserId))
+                            {
+                                <div class="card-actions">
+                                    <button class="btn btn-info btn-icon btn-sm" @onclick="() => ShowEditModal(cuisine)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-icon btn-sm" @onclick="() => DeleteCuisine(cuisine.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            }
                         </td>
                     </tr>
                 }
@@ -79,9 +83,15 @@ else
     private List<CookBook.Models.TypeCuisine> cuisines;
     private CookBook.Models.TypeCuisine editingCuisine = new();
     private bool isModalOpen = false;
+    private string? currentUserId;
+    private bool isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        currentUserId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        isAdmin = user.IsInRole("Admin");
         await LoadCuisines();
     }
 
@@ -101,7 +111,8 @@ else
         editingCuisine = new CookBook.Models.TypeCuisine
         {
             Id = cuisine.Id,
-            Name = cuisine.Name
+            Name = cuisine.Name,
+            UserId = cuisine.UserId // Preserve owner
         };
         isModalOpen = true;
     }
@@ -115,6 +126,7 @@ else
     {
         if (editingCuisine.Id == 0)
         {
+            editingCuisine.UserId = currentUserId; // Set owner
             await TypeCuisineService.AddAsync(editingCuisine);
         }
         else

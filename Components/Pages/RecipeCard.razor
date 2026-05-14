@@ -1,3 +1,5 @@
+@inject AuthenticationStateProvider AuthStateProvider
+
 @code {
     [Parameter] public Recipe Recipe { get; set; }
     [Parameter] public int CurrentRating { get; set; }
@@ -10,6 +12,20 @@
     [Parameter] public EventCallback<int> OnRate { get; set; }
     [Parameter] public EventCallback<int> OnHover { get; set; }
     [Parameter] public EventCallback OnHoverOut { get; set; }
+
+    private string? currentUserId;
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        currentUserId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        isAdmin = user.IsInRole("Admin");
+    }
+
+    private bool CanManage => isAdmin || (currentUserId != null && Recipe.UserId == currentUserId);
+    private bool CanRate => currentUserId != null && Recipe.UserId != currentUserId;
 
     private bool IsStarActive(int star)
     {
@@ -173,35 +189,49 @@
                 <span class="ingredient-chip">@ingredient.Quantity @ingredient.Unit @ingredient.Ingredient?.Name</span>
                 }
             </div>
-            <div class="rating-board">
-                <div class="stars">
-                    @for (var star = 1; star <= 5; star++)
-                    {
-                        <button type="button" class="star-button @(IsStarActive(star) ? "filled" : "")"
-                                @onclick:stopPropagation="true" @onclick="() => OnRate.InvokeAsync(star)"
-                                @onmouseover="() => OnHover.InvokeAsync(star)" @onmouseout="OnHoverOut">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    }
+            @if (currentUserId != null && Recipe.UserId != currentUserId)
+            {
+                <div class="rating-board">
+                    <div class="stars">
+                        @for (var star = 1; star <= 5; star++)
+                        {
+                            var capturedStar = star;
+                            @if (CanRate)
+                            {
+                                <button type="button" class="star-button @(IsStarActive(capturedStar) ? "filled" : "")"
+                                        @onclick:stopPropagation="true" @onclick="() => OnRate.InvokeAsync(capturedStar)"
+                                        @onmouseover="() => OnHover.InvokeAsync(capturedStar)" @onmouseout="OnHoverOut">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="star-button @(IsStarActive(capturedStar) ? "filled" : "")" style="cursor: default;">
+                                    <i class="fas fa-star"></i>
+                                </span>
+                            }
+                        }
+                    </div>
+                    <div class="rating-summary">
+                        @if (VoteCount == 0)
+                        {
+                            <span>Not rated yet</span>
+                        }
+                        else
+                        {
+                            <span>@AverageRating.ToString("0.0") / 5 · @VoteCount vote(s)</span>
+                        }
+                    </div>
                 </div>
-                <div class="rating-summary">
-                    @if (VoteCount == 0)
-                    {
-                        <span>Not rated yet</span>
-                    }
-                    else
-                    {
-                        <span>@AverageRating.ToString("0.0") / 5 · @VoteCount vote(s)</span>
-                    }
-                </div>
-            </div>
-            <AuthorizeView Roles="Admin">
+            }
+            @if (CanManage)
+            {
                 <div class="recipe-actions">
                     <button type="button" class="btn btn-secondary recipe-action-button" @onclick:stopPropagation="true"
                             @onclick="() => OnEdit.InvokeAsync(Recipe)">Edit</button>
                     <button type="button" class="btn btn-secondary recipe-action-button delete-button"
                             @onclick:stopPropagation="true" @onclick="() => OnDelete.InvokeAsync(Recipe.Id)">Delete</button>
                 </div>
-            </AuthorizeView>
+            }
         </div>
     </div>
