@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using CookBook.Models;
 
 namespace CookBook.Models;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<IdentityUser>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -15,6 +17,7 @@ public class AppDbContext : DbContext
  
     protected override void OnModelCreating(ModelBuilder b)
     {
+        base.OnModelCreating(b);
         // ── RecipeIngredient composite PK ────────────────────────────────────
         b.Entity<RecipeIngredient>()
             .HasKey(ri => new { ri.RecipeId, ri.IngredientId });

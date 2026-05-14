@@ -195,11 +195,13 @@
                     }
                 </div>
             </div>
-            <div class="recipe-actions">
-                <button type="button" class="btn btn-secondary recipe-action-button" @onclick:stopPropagation="true"
-                        @onclick="() => OnEdit.InvokeAsync(Recipe)">Edit</button>
-                <button type="button" class="btn btn-secondary recipe-action-button delete-button"
-                        @onclick:stopPropagation="true" @onclick="() => OnDelete.InvokeAsync(Recipe.Id)">Delete</button>
-            </div>
+            <AuthorizeView Roles="Admin">
+                <div class="recipe-actions">
+                    <button type="button" class="btn btn-secondary recipe-action-button" @onclick:stopPropagation="true"
+                            @onclick="() => OnEdit.InvokeAsync(Recipe)">Edit</button>
+                    <button type="button" class="btn btn-secondary recipe-action-button delete-button"
+                            @onclick:stopPropagation="true" @onclick="() => OnDelete.InvokeAsync(Recipe.Id)">Delete</button>
+                </div>
+            </AuthorizeView>
         </div>
     </div>

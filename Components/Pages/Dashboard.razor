@@ -32,8 +32,6 @@ else if (!recipes.Any())
     <div class="no-data-card">
         <i class="fas fa-chart-pie"></i>
         <h3>No data available</h3>
-        <p>Start by adding some recipes to see your statistics here!</p>
-        <a href="/recipes" class="btn btn-primary">Add my first recipe</a>
     </div>
 }
 else
@@ -248,10 +246,10 @@ else
                               .Select(g => new { Name = g.Key, Count = g.Count() }).ToList();
         
         var catColors = catGroups.Select(g => g.Name switch {
-            "Petit-déjeuner" => "#FF6B35",
-            "Déjeuner" => "#1E90FF",
-            "Dîner" => "#FF69B4",
-            "Dessert" => "#F39C12",
+            "breakfast" => "#FF6B35",
+            "lunch" => "#1E90FF",
+            "dinner" => "#FF69B4",
+            "dessert" => "#F39C12",
             _ => "#9B59B6"
         }).ToArray();
 

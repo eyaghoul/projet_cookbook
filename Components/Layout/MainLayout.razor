@@ -1,9 +1,24 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <div class="app-layout">
     <NavMenu />
     <main class="main-content">
-        <article>
+        <div class="top-row px-4" style="height: 56px; display: flex; align-items: center; justify-content: flex-end;">
+            <AuthorizeView>
+                <Authorized>
+                    <span style="color: var(--text); font-size: 0.9rem; margin-right: 60px;">👤 @context.User.Identity?.Name</span>
+                    
+                    <form method="post" action="/api/auth/logout" data-enhance="false" class="d-inline">
+                        <AntiforgeryToken />
+                        <button type="submit" class="btn btn-sm btn-outline-primary" style="padding: 0.5rem 0.75rem; border-radius: 8px;">Logout</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login" class="btn btn-primary btn-sm" style="padding: 0.4rem 1rem; border-radius: 8px; text-decoration: none; font-weight: 600;">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <article style="padding: 2rem;">
             @Body
         </article>
     </main>

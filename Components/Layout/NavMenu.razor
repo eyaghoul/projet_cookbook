@@ -17,21 +17,23 @@
                 <i class="fas fa-utensils"></i> Recipes
             </NavLink>
         </li>
-        <li>
-            <NavLink href="/categories">
-                <i class="fas fa-tags"></i> Categories
-            </NavLink>
-        </li>
-        <li>
-            <NavLink href="/ingredients">
-                <i class="fas fa-carrot"></i> Ingredients
-            </NavLink>
-        </li>
-        <li>
-            <NavLink href="/cuisines">
-                <i class="fas fa-globe"></i> Cuisines
-            </NavLink>
-        </li>
+        <AuthorizeView Roles="Admin">
+            <li>
+                <NavLink href="/categories">
+                    <i class="fas fa-tags"></i> Categories
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="/ingredients">
+                    <i class="fas fa-carrot"></i> Ingredients
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="/typecuisines">
+                    <i class="fas fa-globe"></i> Cuisines
+                </NavLink>
+            </li>
+        </AuthorizeView>
 
     </ul>
 

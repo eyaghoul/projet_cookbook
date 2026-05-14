@@ -1,4 +1,6 @@
 @page "/recipes"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject IRecipeService RecipeService
 @inject ICategoryService CategoryService
@@ -24,9 +26,11 @@
 }
 else
 {
-    <div class="add-recipe-section">
-        <button class="btn btn-primary" @onclick="OpenAddRecipeModal">+ Add Recipe</button>
-    </div>
+    <AuthorizeView Roles="Admin">
+        <div class="add-recipe-section">
+            <button class="btn btn-primary" @onclick="OpenAddRecipeModal">+ Add Recipe</button>
+        </div>
+    </AuthorizeView>
 
     <RecipeFilterBar UniversalSearch="@universalSearch"
                      UniversalSearchChanged="@(v => { universalSearch = v; StateHasChanged(); })"
